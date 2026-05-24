@@ -16,7 +16,20 @@ $$
 
 is known by construction.
 
-The generator in `synthetic_weather.py` shares one weather-like covariate process across several target models. The covariates have autocorrelation, cross-variable interactions, daily cycles, seasonal cycles, intermittent precipitation, and bounded/positive transformed variables.
+For `narx_garch`, the known law is the one-step forecasting law conditioned on the simulated volatility state, so it is more precisely $P(Y_t \mid X_t,\mathcal{F}_{t-1})$.
+
+The generators share one weather-like covariate process across several target models. The covariates have autocorrelation, cross-variable interactions, daily cycles, seasonal cycles, intermittent precipitation, and bounded/positive transformed variables.
+
+## File Layout
+
+- `common.py`: shared configuration, covariate simulation, lag-window construction, and helper math.
+- `preadditive.py`: theory-friendly pre-additive target.
+- `narx_gaussian.py`: nonlinear heteroskedastic NARX-style target.
+- `narx_student_t.py`: NARX-style target with heavy-tailed Student-t noise.
+- `narx_garch.py`: NARX-style target with volatility clustering.
+- `regime_mixture.py`: X-dependent Gaussian regime mixture.
+- `hurdle_lognormal.py`: zero-inflated precipitation-like target.
+- `synthetic_weather.py`: CLI, model dispatcher, and `reference_conditional_samples(...)`.
 
 ## Target Models
 
@@ -58,6 +71,43 @@ $$
 Q_\alpha(Y_t\mid X_t=x)=\mu(x)+\sigma(x)\Phi^{-1}(\alpha).
 $$
 
+### `narx_student_t`
+
+This keeps the same nonlinear NARX mean structure, but replaces Gaussian noise with a heavy-tailed Student-t innovation:
+
+$$
+Y_t \mid X_t=x
+=
+\mu(x)+s(x)T_\nu,
+\qquad
+\nu=5.
+$$
+
+The scale $s(x)$ changes with weather conditions, while the fixed $\nu=5$ gives occasional large shocks. The 5%, 50%, and 95% reference quantiles use precomputed $t_5$ quantiles, so no SciPy dependency is needed.
+
+### `narx_garch`
+
+This keeps the nonlinear NARX mean, but lets the conditional variance cluster over time:
+
+$$
+Y_t \mid X_t,\mathcal{F}_{t-1}
+\sim
+\mathcal{N}(\mu(X_t),\sigma_t^2),
+$$
+
+with
+
+$$
+\sigma_t^2
+=
+\omega
++ \alpha e_{t-1}^2
++ \beta\sigma_{t-1}^2
++ \gamma s^2(X_t).
+$$
+
+Here $s(X_t)$ is the weather-driven base scale and $e_{t-1}$ is the previous generated residual. This model is useful because the variance is not just a memoryless function of $X_t$; it also remembers recent shocks. The saved `sigma` field is the realized one-step conditional scale, so reference conditional samples are still known for each generated row.
+
 ### `regime_mixture`
 
 This target mimics clear/photochemical, wet-removal, and transported/polluted regimes:
@@ -87,10 +137,16 @@ It has a point mass at zero and a positive heavy-tailed component. Reference qua
 
 ## Usage
 
-Generate one dataset:
+Print one generated dataset to stdout as JSON Lines:
 
 ```bash
 python data_generation/synthetic_weather.py --model narx_gaussian
+```
+
+Save generated observations to an `.npz` file:
+
+```bash
+python data_generation/synthetic_weather.py --model narx_gaussian --out data/synthetic_narx_gaussian_weather.npz
 ```
 
 Available models:
@@ -98,11 +154,13 @@ Available models:
 ```text
 preadditive
 narx_gaussian
+narx_student_t
+narx_garch
 regime_mixture
 hurdle_lognormal
 ```
 
-Each output `.npz` contains `X`, `y`, `phi`, `feature_names`, and reference quantiles `q05`, `q50`, and `q95`. Some models include additional parameters such as `mu`, `sigma`, `mixture_weights`, or `p_wet` so the full conditional law can be reconstructed.
+The stdout format starts with one metadata JSON object, then prints one generated observation per line. When saving to `.npz`, each output file contains `X`, `y`, `phi`, `feature_names`, and reference quantiles `q05`, `q50`, and `q95`. Some models include additional parameters such as `mu`, `sigma`, `scale`, `base_sigma`, `mixture_weights`, or `p_wet` so the full conditional law can be reconstructed.
 
 For distributional validation, `synthetic_weather.py` also exposes:
 

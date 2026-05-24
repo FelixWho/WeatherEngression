@@ -45,12 +45,16 @@ $$
 
 ## Synthetic Models
 
-`data_generation/synthetic_weather.py` currently supports:
+Synthetic weather types are split into one module per target law:
 
-- `preadditive`: the theory-friendly baseline $Y=g(\phi(X)+\eta)$.
-- `narx_gaussian`: nonlinear heteroskedastic Gaussian $Y\mid X=x$.
-- `regime_mixture`: X-dependent mixture of Gaussian weather regimes.
-- `hurdle_lognormal`: zero-inflated precipitation-like target.
+- `data_generation/preadditive.py`: the theory-friendly baseline $Y=g(\phi(X)+\eta)$.
+- `data_generation/narx_gaussian.py`: nonlinear heteroskedastic Gaussian $Y\mid X=x$.
+- `data_generation/narx_student_t.py`: nonlinear heteroskedastic Student-t target with heavy-tailed shocks.
+- `data_generation/narx_garch.py`: nonlinear NARX mean with GARCH-style volatility clustering. Its saved one-step conditional law is $Y_t\mid X_t,\mathcal{F}_{t-1}$ because the variance remembers previous generated residuals.
+- `data_generation/regime_mixture.py`: X-dependent mixture of Gaussian weather regimes.
+- `data_generation/hurdle_lognormal.py`: zero-inflated precipitation-like target.
+
+`data_generation/common.py` owns shared covariate simulation and lag-window utilities. `data_generation/synthetic_weather.py` should stay thin: CLI, model dispatch, and true-law reference sampling.
 
 Use the non-preadditive models to test robustness when the engression paper's structural assumptions are violated but the true conditional law is still known.
 

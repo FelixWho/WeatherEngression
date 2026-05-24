@@ -17,7 +17,14 @@ WeatherEngression/
 │   ├── engression.pdf
 │   └── weather.pdf
 ├── data_generation/
+│   ├── common.py
+│   ├── hurdle_lognormal.py
+│   ├── narx_garch.py
+│   ├── narx_gaussian.py
+│   ├── narx_student_t.py
+│   ├── preadditive.py
 │   ├── README.md
+│   ├── regime_mixture.py
 │   └── synthetic_weather.py
 ├── engression_model/
 │   ├── README.md
@@ -35,13 +42,19 @@ Install the minimal Python dependencies:
 pip install -r requirements.txt
 ```
 
-Generate a small synthetic weather dataset:
+Print a small synthetic weather dataset as JSON Lines:
 
 ```bash
 python data_generation/synthetic_weather.py --model narx_gaussian
 ```
 
-Available models are `preadditive`, `narx_gaussian`, `regime_mixture`, and `hurdle_lognormal`. The generated file contains lag windows `X`, targets `y`, the latent index `phi`, and reference quantiles `q05`, `q50`, and `q95`.
+Save a dataset to `.npz` by passing `--out`:
+
+```bash
+python data_generation/synthetic_weather.py --model narx_gaussian --out data/synthetic_narx_gaussian_weather.npz
+```
+
+Available models are `preadditive`, `narx_gaussian`, `narx_student_t`, `narx_garch`, `regime_mixture`, and `hurdle_lognormal`. Each model lives in its own `data_generation/` module, with `synthetic_weather.py` acting as the CLI and dispatcher. Generated samples contain lag windows `X`, targets `y`, the latent index `phi`, and reference quantiles `q05`, `q50`, and `q95`.
 
 For validation against the full known law, use `reference_conditional_samples(...)` from `data_generation/synthetic_weather.py`.
 
@@ -115,6 +128,8 @@ This makes it possible to test whether engression recovers calibrated quantiles,
 The less friendly models are intentionally not pre-ANM:
 
 - `narx_gaussian`: nonlinear heteroskedastic Gaussian `Y | X=x`.
+- `narx_student_t`: nonlinear heteroskedastic Student-t target with heavy-tailed shocks.
+- `narx_garch`: nonlinear NARX mean with volatility clustering; its saved one-step law is conditional on both `X_t` and the simulated history state.
 - `regime_mixture`: X-dependent mixture of Gaussian weather regimes.
 - `hurdle_lognormal`: zero-inflated precipitation-like target with a lognormal positive tail.
 
