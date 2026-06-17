@@ -13,7 +13,9 @@ from __future__ import annotations
 import argparse
 import csv
 import json
+import os
 import sys
+import tempfile
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -30,6 +32,11 @@ from data_generation.synthetic_weather import MODEL_NAMES, generate_dataset as _
 IMAGE_SUFFIXES = {".png", ".jpg", ".jpeg", ".pdf", ".svg"}
 DEFAULT_SEASONAL_PERIOD = 24 * 365
 BASE_X_DIMENSION = len(FEATURE_NAMES)
+
+MPLCONFIGDIR = Path(tempfile.gettempdir()) / "weatherengression_mplconfig"
+MPLCONFIGDIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPLCONFIGDIR))
+os.environ.setdefault("MPLBACKEND", "Agg")
 
 
 def build_generation_config(

@@ -8,14 +8,92 @@ response series produced by one synthetic data-generating model.
 from __future__ import annotations
 
 import argparse
+import os
 from pathlib import Path
+import shlex
+import sys
+import tempfile
 
 import numpy as np
 
 from generate_data import MODEL_NAMES, generate_model_dataset, generate_model_datasets
 
 
+MPLCONFIGDIR = Path(tempfile.gettempdir()) / "weatherengression_mplconfig"
+MPLCONFIGDIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("MPLCONFIGDIR", str(MPLCONFIGDIR))
+os.environ.setdefault("MPLBACKEND", "Agg")
+
 RUN_MODEL_NAMES = (*MODEL_NAMES, "all")
+REPO_ROOT = Path(__file__).resolve().parent
+SYNTHETIC_RUNS_ROOT = REPO_ROOT / "runs" / "synthetic_data"
+
+
+def default_plot_output(model: str) -> Path:
+    """Return the default per-run plot path for a synthetic visualization."""
+
+    run_name = "all_models" if model == "all" else model
+    return SYNTHETIC_RUNS_ROOT / run_name / "target_timeseries.png"
+
+
+def shell_command() -> str:
+    """Return the current command in a copy-pasteable form."""
+
+    parts = ["python", Path(__file__).name, *sys.argv[1:]]
+    return " ".join(shlex.quote(part) for part in parts)
+
+
+def write_run_readme(args: argparse.Namespace, out: Path) -> None:
+    """Write a small README next to a synthetic visualization run."""
+
+    run_dir = out.parent
+    run_dir.mkdir(parents=True, exist_ok=True)
+    title_model = "all synthetic models" if args.model == "all" else args.model
+    readme = run_dir / "README.md"
+    readme.write_text(
+        "\n".join(
+            [
+                f"# Synthetic Data Run: {title_model}",
+                "",
+                "This folder contains one synthetic weather-like time-series visualization run.",
+                "The plotted target is \\(Y_t\\), and the underlying input is the lag-window",
+                "history \\(X_t=(W_{t-L},\\ldots,W_t)\\).",
+                "",
+                "## Command",
+                "",
+                "```bash",
+                shell_command(),
+                "```",
+                "",
+                "## Outputs",
+                "",
+                f"- `{out.name}`: generated target time series with the true 90% interval.",
+                "",
+                "## Parameters",
+                "",
+                "| Parameter | Value |",
+                "|---|---:|",
+                f"| model | `{args.model}` |",
+                f"| n_steps | `{args.n_steps}` |",
+                f"| window | `{args.window}` |",
+                f"| seed | `{args.seed}` |",
+                f"| noise_scale | `{args.noise_scale}` |",
+                f"| rolling_window | `{args.rolling_window}` |",
+                f"| plot_length | `{args.plot_length}` |",
+                f"| rolling_mean | `{not args.no_rolling_mean}` |",
+                f"| diagnostics | `{not args.no_diagnostics}` |",
+                "",
+                "## How To Read This Run",
+                "",
+                "The shaded band is the generator's known conditional 90% interval.",
+                "The black line is one sampled realization of \\(Y_t\\). When enabled,",
+                "the lower panel shows a model-specific diagnostic such as volatility,",
+                "mixture weights, wet-event probability, or latent \\(\\phi(X)\\).",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
 
 
 def load_plotting_libraries():
@@ -340,9 +418,15 @@ def main() -> None:
         default=220,
         help="Number of generated target points to show. Use 0 to show the full generated range.",
     )
-    parser.add_argument("--out", type=Path, default=Path("figures/synthetic_weather_timeseries.png"))
+    parser.add_argument(
+        "--out",
+        type=Path,
+        default=None,
+        help="Output path. Defaults to runs/synthetic_data/<model>/target_timeseries.png.",
+    )
     parser.add_argument("--show", action="store_true")
     args = parser.parse_args()
+    out = args.out if args.out is not None else default_plot_output(args.model)
 
     if args.model == "all":
         datasets = generate_model_datasets(
@@ -354,7 +438,7 @@ def main() -> None:
         )
         plot_all_models(
             datasets=datasets,
-            out=args.out,
+            out=out,
             rolling_window=args.rolling_window,
             plot_length=args.plot_length or None,
             show_rolling_mean=not args.no_rolling_mean,
@@ -372,13 +456,14 @@ def main() -> None:
         plot_timeseries(
             dataset=dataset,
             model=args.model,
-            out=args.out,
+            out=out,
             rolling_window=args.rolling_window,
             plot_length=args.plot_length or None,
             show_rolling_mean=not args.no_rolling_mean,
             show_diagnostics=not args.no_diagnostics,
             show=args.show,
         )
+    write_run_readme(args=args, out=out)
 
 
 if __name__ == "__main__":

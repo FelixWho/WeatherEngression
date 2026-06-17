@@ -30,6 +30,23 @@ WeatherEngression/
 │   ├── README.md
 │   ├── energy.py
 │   └── networks.py
+├── engression_modifications/
+│   ├── README.md
+│   ├── adamw_engression.py
+│   ├── registry.py
+│   ├── regularized_engression.py
+│   └── vanilla_engression.py
+├── experiments/
+│   ├── README.md
+│   ├── engression_diagnostic.py
+│   ├── metrics.py
+│   ├── plotting.py
+│   └── splits.py
+├── runs/
+│   ├── README.md
+│   ├── synthetic_data/
+│   ├── engression_diagnostics/
+│   └── optimizer_sweeps/
 ├── AGENTS.md
 └── README.md
 ```
@@ -57,6 +74,90 @@ python data_generation/synthetic_weather.py --model narx_gaussian --out data/syn
 Available models are `preadditive`, `narx_gaussian`, `narx_student_t`, `narx_garch`, `regime_mixture`, and `hurdle_lognormal`. Each model lives in its own `data_generation/` module, with `synthetic_weather.py` acting as the CLI and dispatcher. Generated samples contain lag windows `X`, targets `y`, the latent index `phi`, and reference quantiles `q05`, `q50`, and `q95`.
 
 For validation against the full known law, use `reference_conditional_samples(...)` from `data_generation/synthetic_weather.py`.
+
+Create a synthetic time-series visualization run:
+
+```bash
+python plot_synthetic_data.py --model narx_student_t
+```
+
+By default, this writes a plot and run README to:
+
+```text
+runs/synthetic_data/narx_student_t/
+```
+
+Create an engression posterior-band diagnostic run:
+
+```bash
+python experiments/engression_diagnostic.py --model narx_student_t --split in-support
+```
+
+By default, this writes the chart, metrics, and run README to:
+
+```text
+runs/engression_diagnostics/narx_student_t/in-support/vanilla/
+```
+
+Compare one fitted vanilla engression model across the OOS definitions:
+
+```bash
+python experiments/oos_comparison.py
+```
+
+By default, this prints a summary table and writes `results.csv`,
+`results.json`, and a run README under:
+
+```text
+runs/oos_comparisons/narx_student_t_vanilla_d12/
+```
+
+The engression model variants are importable from `engression_modifications`:
+
+```python
+from engression_modifications import vanilla, regularized, adamw, lstm
+
+model = regularized
+engressor = model.fit(x_train, y_train, lr=0.003, weight_decay=0.003)
+```
+
+The `lstm` variant keeps lag windows unflattened:
+
+```python
+engressor = lstm.fit(x_train_sequence, y_train)
+```
+
+where \(x_{\mathrm{train}}\) has shape \((n, L+1, d)\).
+
+For full generated-data experiments, use the central pipeline in `experiments`:
+
+```python
+from experiments import (
+    EngressionFitConfig,
+    OOSConfig,
+    PredictionConfig,
+    SplitConfig,
+    SyntheticDataConfig,
+    run_engression_experiment,
+)
+
+result = run_engression_experiment(
+    data_config=SyntheticDataConfig(data_model="narx_student_t", x_dimension=12),
+    split_config=SplitConfig(split="in-support", train_size=4000, test_size=500),
+    fit_config=EngressionFitConfig(
+        engression_model="regularized",
+        lr=0.003,
+        weight_decay=0.003,
+        num_epochs=120,
+    ),
+    prediction_config=PredictionConfig(sample_size=800),
+    oos_config=OOSConfig(knn_threshold_quantile=0.95),
+)
+```
+
+The pipeline reports four out-of-support diagnostics in `result.metrics["oos"]`:
+scalar \(\phi(X)\) range, marginal feature range, marginal feature quantile
+range, and standardized kNN distance.
 
 ## Core Intuition
 
