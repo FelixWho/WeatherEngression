@@ -3,3 +3,6 @@ torch
 matplotlib
 seaborn
 engression
+scipy
+pymatreader
+h5py

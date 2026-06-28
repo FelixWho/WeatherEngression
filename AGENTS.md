@@ -43,6 +43,22 @@ $$
 - `engression_model/`: model/loss code for engression-style conditional generators.
 - `resources/`: PDFs only; do not edit or overwrite paper PDFs.
 
+## Storage
+
+Large data lives outside the repo. The main storage directory for this project is:
+
+```text
+/storage3/fs1/myu/Active
+```
+
+The real Eastern North Atlantic (ENA) weather dataset is a MATLAB v7.3 (HDF5) file at:
+
+```text
+/storage3/fs1/myu/Active/felixhu/weather_data.mat
+```
+
+Read it with `h5py` (the file is HDF5 under the hood). Each sample is an airmass back-trajectory of weather variables with a scalar cloud-condensation-nuclei (CCN) target.
+
 ## Synthetic Models
 
 Synthetic weather types are split into one module per target law:

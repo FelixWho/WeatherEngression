@@ -51,6 +51,21 @@ WeatherEngression/
 └── README.md
 ```
 
+## Storage
+
+The main large storage directory for this project is:
+
+```text
+/storage3/fs1/myu/Active
+```
+
+The real Eastern North Atlantic (ENA) weather dataset is a MATLAB v7.3
+(HDF5) file stored at:
+
+```text
+/storage3/fs1/myu/Active/felixhu/weather_data.mat
+```
+
 ## Quickstart
 
 Install the minimal Python dependencies:
