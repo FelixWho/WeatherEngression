@@ -1,0 +1,11 @@
+checkpoint dir : /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2236345
+cuda: True count: 1
+Parsed arguments:
+  checkpoint_dir: /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2236345
+  device: cuda
+  n_samples: 400
+  which: best
+Loaded checkpointed arms and dataset
+Wildfire crps: 0.10906007140874863
+No wildfire crps: 0.11665552854537964
+done.

@@ -16,7 +16,11 @@ import tempfile
 
 import numpy as np
 
-from generate_data import MODEL_NAMES, generate_model_dataset, generate_model_datasets
+from data_generation.generate_data import (
+    MODEL_NAMES,
+    generate_model_dataset,
+    generate_model_datasets,
+)
 
 
 MPLCONFIGDIR = Path(tempfile.gettempdir()) / "weatherengression_mplconfig"

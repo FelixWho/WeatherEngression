@@ -1,0 +1,60 @@
+[task 8/48] variant=per_timestep --per-timestep-noise  lr=0.01 layers=3 hidden=128  -> runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep/per_timestep_lr0.01_l3_h128
+cuda: True
+Run parameters:
+  additive_noise = False
+  appending_noise = False
+  batch_size = 256
+  ccn_tail_quantile = 0.8
+  checkpoint = False
+  checkpoint_every = 1
+  device = cuda
+  early_stop_patience = 12
+  engression_model = lstm
+  epochs = 100
+  event_flag = dust
+  global_latent_noise = False
+  hidden_dim = 128
+  index_dim = None
+  log_ccn = True
+  lr = 0.01
+  mat_path = /storage3/fs1/myu/Active/felixhu/weather_data.mat
+  max_coverage_90 = 0.99
+  max_samples = None
+  min_coverage_90 = 0.6
+  no_oos = True
+  no_plot = False
+  no_readme = False
+  noise_dim = 96
+  num_layer = 3
+  oos_batch_size = 512
+  oos_bins = 10
+  oos_reference_size = 2000
+  out_dir = runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep/per_timestep_lr0.01_l3_h128
+  per_timestep_noise = True
+  pre_additive = False
+  prediction_samples = 400
+  recurrent_state_noise = False
+  resblock = False
+  seed = 2026
+  seq_stride = 1
+  show = False
+  skip_assertions = True
+  split = paper
+  stochastic_init_noise = False
+  stonet_head = False
+  target = ccn
+  test_size = None
+  train_size = None
+  verbose = False
+  weight_decay = 0.0
+[epoch    1/100] energy-loss 0.4972 | fit 0.9657 | spread 0.4685
+[epoch   10/100] energy-loss 0.4406 | fit 0.9123 | spread 0.4717
+[epoch 17] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+Real-data engression [lstm]: ENA log10(CCN) / paper
+  usable samples loaded: 60866  sequence shape: (241, 22)
+  train rows: 57646   test rows: 3220
+  energy score (CRPS): 0.1523
+  median abs error:    0.2144
+  90% coverage: 0.893  (width 0.898)
+  50% coverage: 0.523  (width 0.360)
+  wrote run to: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep/per_timestep_lr0.01_l3_h128

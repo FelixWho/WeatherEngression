@@ -1,0 +1,87 @@
+job id        : 2236345
+wildfire flag : BB_criterion1
+checkpoints   -> /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2236345
+cuda: True count: 1
+Thu Jul 16 13:44:09 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.105.08             Driver Version: 580.105.08     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:55:00.0 Off |                  Off |
+| N/A   35C    P0             69W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Run parameters:
+  additive_noise = False
+  appending_noise = False
+  batch_size = 256
+  device = cuda
+  engression_model = lstm
+  epochs = 100
+  global_latent_noise = False
+  hidden_dim = 192
+  log_ccn = True
+  lr = 0.003
+  mat_path = /storage3/fs1/myu/Active/felixhu/weather_data.mat
+  max_samples = None
+  noise_dim = 96
+  num_layer = 5
+  per_timestep_noise = False
+  pre_additive = False
+  quiet = False
+  recurrent_state_noise = True
+  save_checkpoint_dir = /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2236345
+  seed = 2026
+  seq_stride = 1
+  split = paper
+  stochastic_init_noise = False
+  stonet_head = False
+  target = ccn
+  test_size = None
+  train_size = None
+  weight_decay = 0.0
+  wildfire_flag = BB_criterion1
+  -> active head variant = ['recurrent_state_noise']
+  -> resolved save dir  = /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2236345
+[epoch    1/100] energy-loss 0.5950 | fit 0.9361 | spread 0.3411
+[epoch   10/100] energy-loss 0.4319 | fit 0.8466 | spread 0.4147
+[epoch   20/100] energy-loss 0.3636 | fit 0.7543 | spread 0.3906
+[epoch   30/100] energy-loss 0.3287 | fit 0.6743 | spread 0.3456
+[epoch   40/100] energy-loss 0.2985 | fit 0.6181 | spread 0.3196
+[epoch   50/100] energy-loss 0.2812 | fit 0.5915 | spread 0.3103
+[epoch   60/100] energy-loss 0.2615 | fit 0.5605 | spread 0.2990
+[epoch   70/100] energy-loss 0.2399 | fit 0.5227 | spread 0.2828
+[epoch   80/100] energy-loss 0.2365 | fit 0.5158 | spread 0.2792
+[epoch   90/100] energy-loss 0.2220 | fit 0.4707 | spread 0.2488
+[epoch  100/100] energy-loss 0.2079 | fit 0.4551 | spread 0.2471
+[epoch    1/100] energy-loss 0.5136 | fit 0.9575 | spread 0.4439
+[epoch   10/100] energy-loss 0.4347 | fit 0.8692 | spread 0.4345
+[epoch   20/100] energy-loss 0.3976 | fit 0.8102 | spread 0.4127
+[epoch   30/100] energy-loss 0.3860 | fit 0.7755 | spread 0.3895
+[epoch   40/100] energy-loss 0.3722 | fit 0.7609 | spread 0.3887
+[epoch   50/100] energy-loss 0.3644 | fit 0.7462 | spread 0.3818
+[epoch   60/100] energy-loss 0.3671 | fit 0.7436 | spread 0.3766
+[epoch   70/100] energy-loss 0.3670 | fit 0.7525 | spread 0.3854
+[epoch   80/100] energy-loss 0.4022 | fit 0.7975 | spread 0.3952
+[epoch   90/100] energy-loss 0.4213 | fit 0.8404 | spread 0.4191
+[epoch  100/100] energy-loss 0.4336 | fit 0.8780 | spread 0.4444
+done. checkpoints written to: /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2236345
+total 16604
+drwxrwxrwx 3 felixhu domain users    2560 Jul 16 14:25 .
+drwxrwxrwx 5 felixhu domain users    1536 Jul 16 13:45 ..
+-rwxrwxrwx 1 felixhu domain users 4242275 Jul 16 14:11 checkpoint_no_wildfire_best.pt
+-rwxrwxrwx 1 felixhu domain users 4242431 Jul 16 14:25 checkpoint_no_wildfire_latest.pt
+-rwxrwxrwx 1 felixhu domain users 4242041 Jul 16 13:50 checkpoint_wildfire_best.pt
+-rwxrwxrwx 1 felixhu domain users 4242197 Jul 16 13:50 checkpoint_wildfire_latest.pt
+drwxrwxrwx 2 felixhu domain users    2560 Jul 16 14:25 dataset

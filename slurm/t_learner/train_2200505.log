@@ -1,0 +1,64 @@
+job id        : 2200505
+wildfire flag : BB_criterion1
+checkpoints   -> /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2200505
+cuda: True count: 1
+Thu Jul 16 00:02:07 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 580.105.08             Driver Version: 580.105.08     CUDA Version: 13.0     |
++-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          On  |   00000000:55:00.0 Off |                  Off |
+| N/A   36C    P0             70W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Run parameters:
+  additive_noise = False
+  appending_noise = False
+  batch_size = 256
+  device = cuda
+  engression_model = lstm
+  epochs = 100
+  global_latent_noise = False
+  hidden_dim = 192
+  log_ccn = True
+  lr = 0.003
+  mat_path = /storage3/fs1/myu/Active/felixhu/weather_data.mat
+  max_samples = None
+  noise_dim = 96
+  num_layer = 5
+  per_timestep_noise = False
+  pre_additive = False
+  recurrent_state_noise = True
+  save_checkpoint_dir = /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2200505
+  seed = 2026
+  seq_stride = 1
+  split = paper
+  stochastic_init_noise = False
+  stonet_head = False
+  target = ccn
+  test_size = None
+  train_size = None
+  weight_decay = 0.0
+  wildfire_flag = BB_criterion1
+  -> active head variant = ['recurrent_state_noise']
+  -> resolved save dir  = /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2200505
+done. checkpoints written to: /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2200505
+total 16604
+drwxrwxrwx 3 felixhu domain users    2560 Jul 16 00:43 .
+drwxrwxrwx 4 felixhu domain users    1024 Jul 16 00:03 ..
+-rwxrwxrwx 1 felixhu domain users 4242275 Jul 16 00:30 checkpoint_no_wildfire_best.pt
+-rwxrwxrwx 1 felixhu domain users 4242431 Jul 16 00:43 checkpoint_no_wildfire_latest.pt
+-rwxrwxrwx 1 felixhu domain users 4242041 Jul 16 00:08 checkpoint_wildfire_best.pt
+-rwxrwxrwx 1 felixhu domain users 4242197 Jul 16 00:08 checkpoint_wildfire_latest.pt
+drwxrwxrwx 2 felixhu domain users    2560 Jul 16 00:43 dataset

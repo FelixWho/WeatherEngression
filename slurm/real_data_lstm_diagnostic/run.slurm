@@ -5,8 +5,10 @@
 #SBATCH -p general-gpu
 #SBATCH -G 1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
-#SBATCH --time=08:00:00
+#SBATCH --mem=64G
+#SBATCH --time=24:00:00
+
+set -euo pipefail
 
 cd /home/felixhu/WeatherEngression
 
@@ -23,36 +25,48 @@ nvidia-smi
 # LSTM-engression diagnostic on the REAL ENA weather data (weather_data.mat).
 #   --target ccn                 Predict the scalar CCN target from the full 22-var trajectory
 #                                (CCN is not inside X, so there is no leakage).
-#   --split random               Shuffled in-distribution split (conditional-distribution test).
-#   --max-samples 8000           Usable trajectories to load (CCN-finite, fully finite features).
-#   --seq-stride 4               Keep every 4th time step: 241 -> ~60 steps. Finer temporal
-#                                detail than the CPU smoke run (stride 8), affordable on GPU.
-#   --train-size 5000 --test-size 800
-#   --epochs 120                 Longer schedule than the 30-epoch CPU run, to separate
+#   --log-ccn                    Train/evaluate on log10(CCN), matching the paper's target setup.
+#   --split paper                Source-paper held-out months:
+#                                Jan/Mar/May/Jul/Sep/Nov 2022 are test; all
+#                                other months are train.
+#   --max-samples all            Load every usable trajectory from weather_data.mat.
+#   --train-size all --test-size all
+#                                Use the full paper train/test pools, with no row caps.
+#   --seq-stride 1               Keep all 241 trajectory time steps.
+#   --epochs 120                 Longer schedule than a smoke run, to separate
 #                                under-dispersion-from-undertraining from genuine
 #                                misspecification when reading the coverage numbers.
+#   --stonet-head                Loose engression head: the package's own StoNet on top
+#                                of the LSTM embedding -- noise at the input and every
+#                                layer, monotonicity hoped (not forced). Ergonomic match
+#                                to upstream engression, more flexible than strict pre-ANM.
 #   --hidden-dim 192 --noise-dim 96 --num-layer 3   Same head capacity as the synthetic LSTM runs.
 #   --lr 0.003 --weight-decay 0.0
 #   --prediction-samples 800     Conditional draws used for quantiles AND the energy score.
+#   --checkpoint-every 1         Update checkpoint_latest.pt every epoch and checkpoint_best.pt
+#                                whenever training energy loss improves.
 #   --device cuda                Train/sample on the allocated GPU.
 #   --skip-assertions            Always write artifacts; do not fail the job on loose thresholds.
 #
 # Writes README.md, metrics.json, and posterior_bands.png under
-#   runs/real_data_diagnostics/ena_weather/ccn/random/lstm/
+#   runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm/
 python -u experiments/real_data_diagnostic.py \
   --target ccn \
-  --split random \
-  --max-samples 8000 \
-  --seq-stride 4 \
-  --train-size 5000 \
-  --test-size 800 \
+  --log-ccn \
+  --split paper \
+  --max-samples all \
+  --seq-stride 1 \
+  --train-size all \
+  --test-size all \
   --epochs 120 \
-  --batch-size 512 \
+  --batch-size 256 \
   --hidden-dim 192 \
   --noise-dim 96 \
   --num-layer 3 \
+  --stonet-head \
   --lr 0.003 \
   --weight-decay 0.0 \
   --prediction-samples 800 \
+  --checkpoint-every 10 \
   --device cuda \
   --skip-assertions

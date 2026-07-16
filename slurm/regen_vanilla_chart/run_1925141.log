@@ -1,0 +1,85 @@
+cuda: True count: 1
+Thu Jul  2 19:06:37 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 550.54.14              Driver Version: 550.54.14      CUDA Version: 12.4     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          Off |   00000000:55:00.0 Off |                  Off |
+| N/A   45C    P0             71W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H100 80GB HBM3          Off |   00000000:68:00.0 Off |                  Off |
+| N/A   54C    P0            434W /  700W |   62234MiB /  81559MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H100 80GB HBM3          Off |   00000000:D2:00.0 Off |                  Off |
+| N/A   58C    P0            464W /  700W |    5128MiB /  81559MiB |     99%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H100 80GB HBM3          Off |   00000000:E4:00.0 Off |                  Off |
+| N/A   46C    P0             71W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    1   N/A  N/A   2878131      C   python                                      62222MiB |
+|    2   N/A  N/A   3477482      C   ...naconda3/envs/mini_torch/bin/python       5118MiB |
++-----------------------------------------------------------------------------------------+
+Run parameters:
+  batch_size = 256
+  ccn_tail_quantile = 0.8
+  checkpoint = False
+  checkpoint_every = 1
+  device = cuda
+  early_stop_patience = None
+  engression_model = vanilla
+  epochs = 80
+  event_flag = dust
+  hidden_dim = 128
+  index_dim = None
+  log_ccn = True
+  lr = 0.01
+  mat_path = /storage3/fs1/myu/Active/felixhu/weather_data.mat
+  max_coverage_90 = 0.99
+  max_samples = None
+  min_coverage_90 = 0.6
+  no_oos = True
+  no_plot = False
+  no_readme = False
+  noise_dim = 64
+  num_layer = 5
+  oos_batch_size = 512
+  oos_bins = 10
+  oos_reference_size = 2000
+  out_dir = runs/real_data_diagnostics/ena_weather/log10_ccn/paper/vanilla_best
+  pre_additive = False
+  prediction_samples = 400
+  resblock = False
+  seed = 2026
+  seq_stride = 1
+  show = False
+  skip_assertions = True
+  split = paper
+  stonet_head = False
+  target = ccn
+  test_size = None
+  train_size = None
+  verbose = False
+  weight_decay = 0.0
+Real-data engression [vanilla]: ENA log10(CCN) / paper
+  usable samples loaded: 60866  sequence shape: (5302,)
+  train rows: 57646   test rows: 3220
+  energy score (CRPS): 0.1622
+  median abs error:    0.2273
+  90% coverage: 0.907  (width 1.024)
+  50% coverage: 0.487  (width 0.349)
+  wrote run to: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/vanilla_best
+copied runs/real_data_diagnostics/ena_weather/log10_ccn/paper/vanilla_best/posterior_bands.png -> reports/fig_vanilla_is.png
+rebuilt reports/real_data_engression_summary.pdf

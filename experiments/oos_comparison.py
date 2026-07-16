@@ -41,7 +41,7 @@ from experiments.metrics import quantile_diagnostic_metrics
 from experiments.oos import OOSConfig, compute_oos_diagnostics
 from experiments.predictions import predict_quantiles
 from experiments.pipeline import set_reproducible_seeds
-from generate_data import (
+from data_generation.generate_data import (
     BASE_X_DIMENSION,
     DEFAULT_SEASONAL_PERIOD,
     MODEL_NAMES,

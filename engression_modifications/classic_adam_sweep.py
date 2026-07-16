@@ -39,7 +39,7 @@ from experiments.pipeline import (
     set_reproducible_seeds,
 )
 from experiments.predictions import predict_quantiles
-from generate_data import (
+from data_generation.generate_data import (
     BASE_X_DIMENSION,
     DEFAULT_SEASONAL_PERIOD,
     MODEL_NAMES,

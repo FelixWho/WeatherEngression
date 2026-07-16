@@ -26,16 +26,17 @@ WeatherEngression/
 │   ├── README.md
 │   ├── regime_mixture.py
 │   └── synthetic_weather.py
-├── engression_model/
+├── engression_modifications/        # all four report architectures live here
 │   ├── README.md
-│   ├── energy.py
-│   └── networks.py
-├── engression_modifications/
-│   ├── README.md
-│   ├── adamw_engression.py
-│   ├── registry.py
-│   ├── regularized_engression.py
-│   └── vanilla_engression.py
+│   ├── lstm_engression.py           # LSTM encoder + default / StoNet / pre-additive heads
+│   ├── vanilla_engression.py        # flat StoNet baseline (wraps the engression package)
+│   ├── regularized_engression.py    # vanilla + classic Adam weight decay
+│   ├── adamw_engression.py          # vanilla + decoupled AdamW
+│   ├── lstm_sweep.py                # sweep over LSTM heads / hyperparameters
+│   ├── classic_adam_sweep.py        # sweep over Adam lr / weight decay
+│   └── registry.py                  # name -> model-spec lookup
+├── archive/
+│   └── engression_model_starter/    # superseded prototype (energy.py, networks.py)
 ├── experiments/
 │   ├── README.md
 │   ├── engression_diagnostic.py

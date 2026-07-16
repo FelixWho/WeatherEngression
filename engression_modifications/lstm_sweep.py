@@ -36,7 +36,7 @@ from experiments.pipeline import (
     SyntheticDataConfig,
     run_engression_experiment,
 )
-from generate_data import BASE_X_DIMENSION, DEFAULT_SEASONAL_PERIOD, MODEL_NAMES
+from data_generation.generate_data import BASE_X_DIMENSION, DEFAULT_SEASONAL_PERIOD, MODEL_NAMES
 
 
 SWEEP_ROOT = REPO_ROOT / "runs" / "optimizer_sweeps" / "lstm"

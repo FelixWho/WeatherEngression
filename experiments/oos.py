@@ -225,6 +225,65 @@ def knn_distance_oos(
     return flags, summary
 
 
+def mahalanobis_distances(
+    reference: np.ndarray | torch.Tensor,
+    queries: np.ndarray | torch.Tensor,
+    reg: float = 1e-6,
+) -> np.ndarray:
+    """Per-row Mahalanobis distance from ``queries`` to the ``reference`` distribution.
+
+    Distance is ``sqrt((x - mu) Sigma^-1 (x - mu))`` using the reference mean and
+    covariance. The covariance is ridge-regularized and inverted with a pseudo-
+    inverse, so it stays stable in high-dimensional (e.g. LSTM-embedding) spaces.
+    """
+
+    ref = as_numpy_2d(reference).astype(np.float64)
+    query = as_numpy_2d(queries).astype(np.float64)
+    mean = ref.mean(axis=0, keepdims=True)
+    cov = np.atleast_2d(np.cov(ref, rowvar=False))
+    cov += reg * np.eye(cov.shape[0])
+    inv_cov = np.linalg.pinv(cov)
+    delta = query - mean
+    squared = np.einsum("ij,jk,ik->i", delta, inv_cov, delta)
+    np.maximum(squared, 0.0, out=squared)
+    return np.sqrt(squared).astype(np.float32)
+
+
+def mahalanobis_distance_oos(
+    x_train: np.ndarray | torch.Tensor,
+    x_test: np.ndarray | torch.Tensor,
+    threshold_quantile: float,
+    reference_size: int,
+    seed: int,
+    reg: float = 1e-6,
+) -> tuple[np.ndarray, dict[str, object]]:
+    """Flag rows whose Mahalanobis distance exceeds a train-distribution threshold."""
+
+    if not 0.0 < threshold_quantile < 1.0:
+        raise ValueError("threshold_quantile must lie between 0 and 1")
+    train = as_numpy_2d(x_train)
+    test = as_numpy_2d(x_test)
+    reference_idx = choose_reference_indices(len(train), reference_size, seed)
+    reference = train[reference_idx]
+
+    train_reference_distances = mahalanobis_distances(reference, reference, reg=reg)
+    threshold = float(np.quantile(train_reference_distances, threshold_quantile))
+    test_distances = mahalanobis_distances(reference, test, reg=reg)
+    flags = test_distances > threshold
+    summary = summarize_flags(flags)
+    summary.update(
+        {
+            "threshold_quantile": float(threshold_quantile),
+            "threshold": threshold,
+            "reference_size": int(len(reference)),
+            "mean_test_distance": float(np.mean(test_distances)),
+            "max_test_distance": float(np.max(test_distances)) if len(test_distances) else 0.0,
+            "mean_train_reference_distance": float(np.mean(train_reference_distances)),
+        }
+    )
+    return flags, summary
+
+
 def compute_oos_diagnostics(
     x_train: np.ndarray | torch.Tensor,
     x_test: np.ndarray | torch.Tensor,

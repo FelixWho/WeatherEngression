@@ -1,0 +1,18 @@
+[task 25/48] appending_lr0.003_l3_h192
+  checkpoint: /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/appending_lr0.003_l3_h192/checkpoint_best.pt
+  out dir   : runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/appending_lr0.003_l3_h192
+cuda: True count: 1
+Compute device: cuda
+Loading checkpoint: /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/appending_lr0.003_l3_h192/checkpoint_best.pt
+Loading data and rebuilding the split (no retraining)...
+  train rows: 57646   test rows: 3220
+
+overall 90% coverage: 0.414
+PIT shape: underdispersed (intervals too narrow)  (mean 0.556/0.5, var 0.174/0.083, KS 0.291)
+embedding dim: 192  kNN/Maha distance corr: 0.939
+coverage by distance bin (closest -> farthest):
+  kNN : [0.401, 0.469, 0.45, 0.46, 0.394, 0.425, 0.407, 0.366, 0.385, 0.382]
+  Maha: [0.398, 0.447, 0.419, 0.398, 0.441, 0.466, 0.419, 0.326, 0.422, 0.404]
+
+wrote: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/appending_lr0.003_l3_h192/coverage_vs_distance.png
+wrote: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/appending_lr0.003_l3_h192/oos_from_checkpoint.json

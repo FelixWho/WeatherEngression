@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import torch
 
-from generate_data import flatten_x_windows
+from data_generation.generate_data import flatten_x_windows
 
 
 def tensors_from_dataset(

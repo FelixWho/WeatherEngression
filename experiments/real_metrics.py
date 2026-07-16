@@ -47,6 +47,101 @@ def empirical_quantile_metrics(
     }
 
 
+def pit_values(samples: np.ndarray, y_test: np.ndarray, seed: int = 0) -> np.ndarray:
+    """Randomized probability-integral-transform (PIT) value per test point.
+
+    ``samples`` has shape ``(n, sample_size)``; ``y_test`` is the realized target.
+    For point ``i`` the PIT is where ``y_i`` falls in its own predictive sample
+    distribution. Using the randomized-rank form
+
+        u_i = (a_i + U_i * (b_i - a_i + 1)) / (S + 1),
+
+    with ``a = #{s < y}``, ``b = #{s <= y}`` and ``U_i ~ Uniform(0, 1)``, makes the
+    ``u_i`` EXACTLY Uniform(0, 1) when the predictive shape is correct (the ``U_i``
+    term breaks ties and removes the grid/boundary bias of the plain rank). A flat
+    histogram of these values is the shape-calibration check the 50%/90% coverage
+    numbers cannot provide.
+    """
+
+    samples = np.asarray(samples, dtype=np.float64)
+    y = np.asarray(y_test, dtype=np.float64).reshape(-1, 1)
+    sample_size = samples.shape[1]
+    below = np.sum(samples < y, axis=1)              # a = #{s < y}
+    at_or_below = np.sum(samples <= y, axis=1)       # b = #{s <= y}
+    u = np.random.default_rng(seed).random(samples.shape[0])
+    return (below + u * (at_or_below - below + 1)) / (sample_size + 1)
+
+
+def pit_calibration_metrics(pit: np.ndarray, n_bins: int = 20) -> dict[str, object]:
+    """Scalar summaries of PIT uniformity: bias, dispersion, and overall shape.
+
+    Under correct predictive shape the PIT is Uniform(0, 1), so mean = 0.5 and
+    variance = 1/12. The signs are diagnostic:
+
+    - ``pit_mean`` != 0.5   -> location bias (predictions shifted low/high);
+    - ``pit_var`` > 1/12    -> UNDERdispersed (U-shaped PIT, intervals too narrow);
+    - ``pit_var`` < 1/12    -> OVERdispersed (dome-shaped PIT, intervals too wide);
+    - ``pit_ks``            -> Kolmogorov-Smirnov distance to uniform (overall).
+    - ``pit_l1``            -> mean |bin freq - uniform| over ``n_bins`` (overall).
+    """
+
+    pit = np.asarray(pit, dtype=np.float64).reshape(-1)
+    n = pit.size
+    uniform_var = 1.0 / 12.0
+    ecdf = np.sort(pit)
+    grid = (np.arange(1, n + 1)) / n
+    ks = float(np.max(np.abs(ecdf - grid))) if n else float("nan")
+    counts, _ = np.histogram(pit, bins=n_bins, range=(0.0, 1.0))
+    l1 = float(np.mean(np.abs(counts / max(n, 1) - 1.0 / n_bins)))
+    var = float(np.var(pit))
+    if var > uniform_var * 1.15:
+        shape = "underdispersed (intervals too narrow)"
+    elif var < uniform_var * 0.85:
+        shape = "overdispersed (intervals too wide)"
+    else:
+        shape = "well-dispersed"
+    return {
+        "pit_mean": float(np.mean(pit)),
+        "pit_var": var,
+        "pit_var_ideal": uniform_var,
+        "pit_ks": ks,
+        "pit_l1": l1,
+        "pit_shape": shape,
+        "pit_n_bins": int(n_bins),
+    }
+
+
+def coverage_by_distance_bins(
+    distances: np.ndarray,
+    covered: np.ndarray,
+    n_bins: int = 10,
+) -> list[dict[str, object]]:
+    """Stratify 90% interval coverage into equal-count bins of an OOD distance.
+
+    Test points are sorted by ``distances`` and split into ``n_bins`` equal-count
+    groups (bin 0 = closest to training, last bin = farthest). For each bin the
+    mean distance and the realized coverage are reported, so calibration can be
+    read off as a function of distance from the training feature space.
+    """
+
+    distances = np.asarray(distances, dtype=np.float64)
+    covered = np.asarray(covered, dtype=np.float64)
+    order = np.argsort(distances, kind="stable")
+    out: list[dict[str, object]] = []
+    for i, idx in enumerate(np.array_split(order, n_bins)):
+        if len(idx) == 0:
+            continue
+        out.append(
+            {
+                "bin": i,
+                "n": int(len(idx)),
+                "mean_distance": float(distances[idx].mean()),
+                "coverage_90": float(covered[idx].mean()),
+            }
+        )
+    return out
+
+
 def energy_score_samples(samples: np.ndarray, y_test: np.ndarray) -> dict[str, object]:
     """Mean univariate energy score (CRPS) of conditional samples vs realized y.
 

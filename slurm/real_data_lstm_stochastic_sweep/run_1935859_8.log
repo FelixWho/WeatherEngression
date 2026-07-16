@@ -1,0 +1,64 @@
+[task 8/16] variant=additive --additive-noise  lr=0.003 layers=3 hidden=192  -> runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep/additive_lr0.003_l3_h192
+cuda: True
+Run parameters:
+  additive_noise = True
+  appending_noise = False
+  batch_size = 256
+  ccn_tail_quantile = 0.8
+  checkpoint = False
+  checkpoint_every = 1
+  device = cuda
+  early_stop_patience = 12
+  engression_model = lstm
+  epochs = 100
+  event_flag = dust
+  hidden_dim = 192
+  index_dim = None
+  log_ccn = True
+  lr = 0.003
+  mat_path = /storage3/fs1/myu/Active/felixhu/weather_data.mat
+  max_coverage_90 = 0.99
+  max_samples = None
+  min_coverage_90 = 0.6
+  no_oos = True
+  no_plot = False
+  no_readme = False
+  noise_dim = 96
+  num_layer = 3
+  oos_batch_size = 512
+  oos_bins = 10
+  oos_reference_size = 2000
+  out_dir = runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep/additive_lr0.003_l3_h192
+  pre_additive = False
+  prediction_samples = 400
+  resblock = False
+  seed = 2026
+  seq_stride = 1
+  show = False
+  skip_assertions = True
+  split = paper
+  stonet_head = False
+  target = ccn
+  test_size = None
+  train_size = None
+  verbose = False
+  weight_decay = 0.0
+[epoch    1/100] energy-loss 0.5011 | fit 0.9249 | spread 0.4237
+[epoch   10/100] energy-loss 0.3446 | fit 0.6789 | spread 0.3343
+[epoch   20/100] energy-loss 0.2688 | fit 0.5325 | spread 0.2637
+[epoch   30/100] energy-loss 0.2222 | fit 0.4431 | spread 0.2208
+[epoch   40/100] energy-loss 0.1953 | fit 0.3948 | spread 0.1995
+[epoch   50/100] energy-loss 0.1793 | fit 0.3576 | spread 0.1783
+[epoch   60/100] energy-loss 0.1695 | fit 0.3407 | spread 0.1712
+[epoch   70/100] energy-loss 0.1569 | fit 0.3192 | spread 0.1623
+[epoch   80/100] energy-loss 0.1525 | fit 0.3083 | spread 0.1558
+[epoch   90/100] energy-loss 0.1497 | fit 0.3037 | spread 0.1541
+[epoch  100/100] energy-loss 0.1507 | fit 0.3017 | spread 0.1511
+Real-data engression [lstm]: ENA log10(CCN) / paper
+  usable samples loaded: 60866  sequence shape: (241, 22)
+  train rows: 57646   test rows: 3220
+  energy score (CRPS): 0.1391
+  median abs error:    0.1709
+  90% coverage: 0.459  (width 0.254)
+  50% coverage: 0.189  (width 0.101)
+  wrote run to: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep/additive_lr0.003_l3_h192

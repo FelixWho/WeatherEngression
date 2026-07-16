@@ -1,0 +1,50 @@
+[task 18/24] lr0.001_h128_l5_n128  -> runs/real_data_diagnostics/ena_weather/log10_ccn/paper/vanilla_sweep/lr0.001_h128_l5_n128
+cuda: True
+Run parameters:
+  batch_size = 256
+  ccn_tail_quantile = 0.8
+  checkpoint = True
+  checkpoint_every = 1
+  device = cuda
+  engression_model = vanilla
+  epochs = 80
+  event_flag = dust
+  hidden_dim = 128
+  index_dim = None
+  log_ccn = True
+  lr = 0.001
+  mat_path = /storage3/fs1/myu/Active/felixhu/weather_data.mat
+  max_coverage_90 = 0.99
+  max_samples = None
+  min_coverage_90 = 0.6
+  no_oos = False
+  no_plot = False
+  no_readme = False
+  noise_dim = 128
+  num_layer = 5
+  oos_batch_size = 512
+  oos_bins = 10
+  oos_reference_size = 2000
+  out_dir = runs/real_data_diagnostics/ena_weather/log10_ccn/paper/vanilla_sweep/lr0.001_h128_l5_n128
+  pre_additive = False
+  prediction_samples = 400
+  resblock = False
+  seed = 2026
+  seq_stride = 1
+  show = False
+  skip_assertions = True
+  split = paper
+  stonet_head = False
+  target = ccn
+  test_size = None
+  train_size = None
+  verbose = False
+  weight_decay = 0.0
+Real-data engression [vanilla]: ENA log10(CCN) / paper
+  usable samples loaded: 60866  sequence shape: (5302,)
+  train rows: 57646   test rows: 3220
+  energy score (CRPS): 0.1578
+  median abs error:    0.1824
+  90% coverage: 0.295  (width 0.172)
+  50% coverage: 0.125  (width 0.070)
+  wrote run to: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/vanilla_sweep/lr0.001_h128_l5_n128

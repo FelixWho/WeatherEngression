@@ -8,7 +8,7 @@ from typing import Any, Callable
 import torch
 
 from .adamw_engression import AdamWEngressionConfig, fit_adamw_engression
-from .lstm_engression import LSTMEngressionConfig, fit_lstm_engression
+from .lstm import LSTMEngressionConfig, fit_lstm_engression
 from .regularized_engression import RegularizedEngressionConfig, fit_regularized_engression
 from .vanilla_engression import VanillaEngressionConfig, fit_vanilla_engression
 

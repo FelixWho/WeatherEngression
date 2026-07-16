@@ -1,0 +1,37 @@
+wildfire flag : BB_criterion1
+save dir (rel): runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent   -> resolves under storage3
+cuda: True count: 1
+Mon Jul 13 14:57:07 2026       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 550.54.14              Driver Version: 550.54.14      CUDA Version: 12.4     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  NVIDIA H100 80GB HBM3          Off |   00000000:55:00.0 Off |                  Off |
+| N/A   64C    P0            688W /  700W |   47570MiB /  81559MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   1  NVIDIA H100 80GB HBM3          Off |   00000000:68:00.0 Off |                  Off |
+| N/A   58C    P0            688W /  700W |   47570MiB /  81559MiB |    100%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   2  NVIDIA H100 80GB HBM3          Off |   00000000:D2:00.0 Off |                  Off |
+| N/A   42C    P0             72W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+|   3  NVIDIA H100 80GB HBM3          Off |   00000000:E4:00.0 Off |                  Off |
+| N/A   42C    P0             71W /  700W |       0MiB /  81559MiB |      0%      Default |
+|                                         |                        |             Disabled |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|    0   N/A  N/A    788679      C   ...anaconda/envs/diff-synth/bin/python      47556MiB |
+|    1   N/A  N/A    788680      C   ...anaconda/envs/diff-synth/bin/python      47556MiB |
++-----------------------------------------------------------------------------------------+
+done -> /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent

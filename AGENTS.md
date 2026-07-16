@@ -40,7 +40,10 @@ $$
 ## Repo Organization
 
 - `data_generation/`: synthetic weather-like time-series simulators with known conditional laws.
-- `engression_model/`: model/loss code for engression-style conditional generators.
+- `engression_modifications/`: the engression models. All four report architectures live here:
+  vanilla flat (`vanilla_engression.py`) and the LSTM encoder with default / StoNet / pre-additive
+  heads (`lstm_engression.py`, selected by `--stonet-head` / `--pre-additive`).
+- `archive/`: superseded prototype code, imported by nothing (see `archive/README.md`).
 - `resources/`: PDFs only; do not edit or overwrite paper PDFs.
 
 ## Storage
@@ -59,6 +62,36 @@ The real Eastern North Atlantic (ENA) weather dataset is a MATLAB v7.3 (HDF5) fi
 
 Read it with `h5py` (the file is HDF5 under the hood). Each sample is an airmass back-trajectory of weather variables with a scalar cloud-condensation-nuclei (CCN) target.
 
+## Running Jobs (IMPORTANT)
+
+The login node has no GPU and limited/contended CPU. Do **not** run training,
+evaluation, sweeps, or any heavy/long-running compute in the foreground with
+`.venv/bin/python experiments/....py`. Foreground runs hog the login node's CPU,
+load the ~3 GB `.mat` slowly over the network filesystem, and get killed before
+finishing.
+
+Instead:
+
+- **Always submit heavy work as a SLURM batch job.** Write (or reuse) a `.slurm`
+  file under `slurm/<task>/run.slurm` and `sbatch` it. Follow the existing files
+  in `slurm/` as templates (account `compute2-myu`, partition `general-gpu`,
+  `source .venv/bin/activate`, a CUDA sanity check, then the `python -u ...` call).
+- **Use the GPU whenever possible:** `-p general-gpu`, `#SBATCH -G 1`, and pass
+  `--device cuda` to the script. Training that OOMs or crawls on the login node
+  runs fine on a GPU node.
+- Only tiny, seconds-long sanity checks (imports, argument parsing, a shape print)
+  may be run directly; anything that loads the full dataset or trains a model goes
+  through SLURM.
+- If a `.slurm` for the task does not exist yet, create one rather than running the
+  command directly.
+- **Always save checkpoints.** Any training job must write model checkpoints (for
+  the LSTM diagnostic that means leaving checkpointing ON — do NOT pass
+  `--no-checkpoint`). A trained model with no checkpoint cannot be reloaded, so
+  post-hoc work (OOS diagnostics, OOD splits, chart regeneration, retraining a
+  winner) forces a full re-run. The extra disk is far cheaper than the wasted GPU
+  hours. This applies to sweeps too: prefer keeping checkpoints even for lean
+  grid runs.
+
 ## Synthetic Models
 
 Synthetic weather types are split into one module per target law:
@@ -73,6 +106,12 @@ Synthetic weather types are split into one module per target law:
 `data_generation/common.py` owns shared covariate simulation and lag-window utilities. `data_generation/synthetic_weather.py` should stay thin: CLI, model dispatch, and true-law reference sampling.
 
 Use the non-preadditive models to test robustness when the engression paper's structural assumptions are violated but the true conditional law is still known.
+
+## Communication Style
+
+- Do not be verbose. Concise and intuitive is the priority.
+- Lead with the answer; cut preamble, hedging, and exhaustive option lists.
+- Favor plain intuition over formal walls of text; add detail only when asked.
 
 ## Implementation Principles
 

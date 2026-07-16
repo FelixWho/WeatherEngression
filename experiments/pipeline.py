@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from engression_modifications import EngressionModelSpec, get_engression_model
-from generate_data import (
+from data_generation.generate_data import (
     BASE_X_DIMENSION,
     DEFAULT_SEASONAL_PERIOD,
     generate_supervised_dataset,
@@ -61,6 +61,11 @@ class EngressionFitConfig:
     standardize: bool = True
     device: str | torch.device = "cpu"
     verbose: bool = False
+    # LSTM-only head options.
+    stonet_head: bool = False
+    pre_additive: bool = False
+    index_dim: int | None = None
+    resblock: bool = False
 
 
 @dataclass(frozen=True)
@@ -180,6 +185,11 @@ def fit_experiment_model(
     model_spec = get_engression_model(fit_config.engression_model)
     if model_spec.name in {"regularized", "adamw", "lstm"}:
         overrides["weight_decay"] = fit_config.weight_decay
+    if model_spec.name == "lstm":
+        overrides["stonet_head"] = fit_config.stonet_head
+        overrides["pre_additive"] = fit_config.pre_additive
+        overrides["index_dim"] = fit_config.index_dim
+        overrides["resblock"] = fit_config.resblock
     return model_spec.fit(
         data.x_train,
         data.y_train,

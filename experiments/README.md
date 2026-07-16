@@ -139,6 +139,7 @@ runs/oos_comparisons/<data-model>_<engression-model>_d<dimension>/
 
 ## Design Boundary
 
-Synthetic data generation stays in `generate_data.py` and `data_generation/`.
+Synthetic data generation stays in `data_generation/` (including
+`data_generation/generate_data.py`).
 Engression model variants stay in `engression_modifications/`. This package is
 the glue layer that runs experiments using those pieces.

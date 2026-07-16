@@ -1,0 +1,66 @@
+cuda: True count: 1
+Run parameters:
+  batch_size = 256
+  ccn_tail_quantile = 0.8
+  checkpoint = True
+  checkpoint_every = 10
+  device = cuda
+  epochs = 150
+  event_flag = dust
+  hidden_dim = 256
+  index_dim = None
+  log_ccn = True
+  lr = 0.003
+  mat_path = /storage3/fs1/myu/Active/felixhu/weather_data.mat
+  max_coverage_90 = 0.99
+  max_samples = None
+  min_coverage_90 = 0.6
+  no_oos = False
+  no_plot = False
+  no_readme = False
+  noise_dim = 128
+  num_layer = 3
+  oos_batch_size = 512
+  oos_bins = 10
+  oos_reference_size = 2000
+  out_dir = runs/real_data_diagnostics/log10_ccn/paper/sweep/C_bigreg_stonet
+  pre_additive = False
+  prediction_samples = 800
+  resblock = False
+  seed = 2026
+  seq_stride = 4
+  show = False
+  skip_assertions = True
+  split = paper
+  stonet_head = True
+  target = ccn
+  test_size = None
+  train_size = None
+  verbose = False
+  weight_decay = 0.0001
+[epoch    1/150] energy-loss 0.4594 | fit 0.9004 | spread 0.4410
+[epoch   10/150] energy-loss 0.3411 | fit 0.6808 | spread 0.3397
+[epoch   20/150] energy-loss 0.2937 | fit 0.5879 | spread 0.2941
+[epoch   30/150] energy-loss 0.2670 | fit 0.5310 | spread 0.2640
+[epoch   40/150] energy-loss 0.2516 | fit 0.5053 | spread 0.2537
+[epoch   50/150] energy-loss 0.2410 | fit 0.4863 | spread 0.2454
+[epoch   60/150] energy-loss 0.2344 | fit 0.4799 | spread 0.2455
+[epoch   70/150] energy-loss 0.2314 | fit 0.4642 | spread 0.2328
+[epoch   80/150] energy-loss 0.2271 | fit 0.4569 | spread 0.2298
+[epoch   90/150] energy-loss 0.2236 | fit 0.4571 | spread 0.2335
+[epoch  100/150] energy-loss 0.2197 | fit 0.4407 | spread 0.2210
+[epoch  110/150] energy-loss 0.2211 | fit 0.4438 | spread 0.2228
+[epoch  120/150] energy-loss 0.2161 | fit 0.4366 | spread 0.2205
+[epoch  130/150] energy-loss 0.2166 | fit 0.4401 | spread 0.2236
+[epoch  140/150] energy-loss 0.2160 | fit 0.4324 | spread 0.2163
+[epoch  150/150] energy-loss 0.2131 | fit 0.4309 | spread 0.2178
+Real-data LSTM engression: ENA log10(CCN) / paper
+  usable samples loaded: 60866  sequence shape: (61, 22)
+  train rows: 57646   test rows: 3220
+  energy score (CRPS): 0.1377
+  median abs error:    0.1788
+  90% coverage: 0.572  (width 0.363)
+  50% coverage: 0.264  (width 0.147)
+  embedding OOD (256-d): kNN mean dist 11.839, Mahalanobis mean dist 16.295
+    coverage closest vs farthest bin: kNN 0.547 -> 0.618
+  wrote run to: runs/real_data_diagnostics/log10_ccn/paper/sweep/C_bigreg_stonet

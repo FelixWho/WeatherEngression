@@ -35,7 +35,7 @@ from experiments.pipeline import (
     run_engression_experiment,
 )
 from experiments.plotting import write_posterior_band_chart
-from generate_data import (
+from data_generation.generate_data import (
     BASE_X_DIMENSION,
     DEFAULT_SEASONAL_PERIOD,
     MODEL_NAMES,
@@ -83,6 +83,10 @@ def build_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument("--hidden-dim", type=int, default=192)
     parser.add_argument("--noise-dim", type=int, default=96)
     parser.add_argument("--num-layer", type=int, default=3)
+    parser.add_argument("--stonet-head", action="store_true", help="LSTM: use package StoNet head (loose).")
+    parser.add_argument("--pre-additive", action="store_true", help="LSTM: monotone pre-ANM head Y=g(phi(X)+eta).")
+    parser.add_argument("--index-dim", type=int, default=None, help="LSTM: latent index width for --pre-additive.")
+    parser.add_argument("--resblock", action="store_true", help="LSTM: residual StoNet blocks with --stonet-head.")
     parser.add_argument("--lr", type=float, default=0.003)
     parser.add_argument("--weight-decay", type=float, default=0.0)
     parser.add_argument("--prediction-samples", type=int, default=2000)
@@ -145,6 +149,10 @@ def main() -> None:
         num_layer=args.num_layer,
         hidden_dim=args.hidden_dim,
         noise_dim=args.noise_dim,
+        stonet_head=args.stonet_head,
+        pre_additive=args.pre_additive,
+        index_dim=args.index_dim,
+        resblock=args.resblock,
         add_bn=False,
         lr=args.lr,
         weight_decay=args.weight_decay,

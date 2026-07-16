@@ -1,0 +1,26 @@
+checkpoint dir : /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_recurrent_2236345
+cuda: True count: 1
+Loaded checkpointed arms and dataset
+/home/felixhu/WeatherEngression/experiments/t_learner/test.py:128: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
+  print((ys[:, None] - samples).shape)
+torch.Size([408, 25])
+/home/felixhu/WeatherEngression/experiments/t_learner/test.py:129: DeprecationWarning: __array_wrap__ must accept context and return_scalar arguments (positionally) in the future. (Deprecated NumPy 2.0)
+  lhs = np.mean(np.abs(ys[:, None] - samples))
+Traceback (most recent call last):
+  File "/usr/lib64/python3.9/runpy.py", line 197, in _run_module_as_main
+    return _run_code(code, main_globals, None,
+  File "/usr/lib64/python3.9/runpy.py", line 87, in _run_code
+    exec(code, run_globals)
+  File "/home/felixhu/WeatherEngression/experiments/t_learner/test.py", line 231, in <module>
+    main()
+  File "/home/felixhu/WeatherEngression/experiments/t_learner/test.py", line 224, in main
+    loss_score_wildfire = energy_loss(eng_wildfire, test_wildfire_x, test_wildfire_y)
+  File "/home/felixhu/WeatherEngression/experiments/t_learner/test.py", line 129, in energy_loss
+    lhs = np.mean(np.abs(ys[:, None] - samples))
+  File "/home/felixhu/WeatherEngression/.venv/lib64/python3.9/site-packages/numpy/_core/fromnumeric.py", line 3594, in mean
+    return mean(axis=axis, dtype=dtype, out=out, **kwargs)
+TypeError: mean() received an invalid combination of arguments - got (dtype=NoneType, out=NoneType, axis=NoneType, ), but expected one of:
+ * (*, torch.dtype dtype = None)
+ * (tuple of ints dim, bool keepdim = False, *, torch.dtype dtype = None)
+ * (tuple of names dim, bool keepdim = False, *, torch.dtype dtype = None)
+

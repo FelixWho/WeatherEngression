@@ -1,0 +1,18 @@
+[task 33/48] global_latent_lr0.01_l3_h192
+  checkpoint: /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/global_latent_lr0.01_l3_h192/checkpoint_best.pt
+  out dir   : runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/global_latent_lr0.01_l3_h192
+cuda: True count: 1
+Compute device: cuda
+Loading checkpoint: /storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/global_latent_lr0.01_l3_h192/checkpoint_best.pt
+Loading data and rebuilding the split (no retraining)...
+  train rows: 57646   test rows: 3220
+
+overall 90% coverage: 0.915
+PIT shape: well-dispersed  (mean 0.507/0.5, var 0.080/0.083, KS 0.024)
+embedding dim: 192  kNN/Maha distance corr: 0.978
+coverage by distance bin (closest -> farthest):
+  kNN : [0.848, 0.904, 0.938, 0.944, 0.925, 0.935, 0.901, 0.913, 0.922, 0.919]
+  Maha: [0.845, 0.901, 0.935, 0.944, 0.941, 0.922, 0.91, 0.91, 0.925, 0.916]
+
+wrote: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/global_latent_lr0.01_l3_h192/coverage_vs_distance.png
+wrote: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos/global_latent_lr0.01_l3_h192/oos_from_checkpoint.json
