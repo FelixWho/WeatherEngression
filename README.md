@@ -11,6 +11,14 @@ The working research question is:
 
 > Can an engression-style model learn calibrated conditional distributions `P(Y | X=x)` for weather-like trajectory histories, and can synthetic data with known `P(Y | X=x)` validate whether the learned distribution matches the data-generating process?
 
+## Motivation
+
+1. **CCN is upstream of a major climate uncertainty.** Clouds cannot form droplets without particles to condense on, so the number of cloud condensation nuclei (CCN) controls how bright a cloud is and how long it lasts. Aerosol effects on clouds remain the largest uncertainty in estimates of human-caused radiative forcing, so anything that moves CCN feeds directly into that uncertainty.
+
+2. **ENA is a clean stage, and wildfire is a growing perturbation.** The Eastern North Atlantic (ENA) is a marine background broken up by occasional long-range smoke transport, so an arriving plume stands out instead of being lost in local pollution. Wildfires are worth singling out because they are becoming more frequent and intense, which means this pathway is strengthening over time.
+
+3. **Predicting CCN is not the same as knowing what smoke does.** A model can forecast CCN accurately and still not tell you the effect of the smoke itself, because the weather that carries smoke to the site also changes CCN on its own through wind, subsidence, and rain scavenging. Separating the two means running a wildfire model and a clean model on the same weather, which is what turns this from forecasting into causal inference.
+
 ## Project Structure
 
 ```text
