@@ -1,0 +1,300 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage[hidelinks]{hyperref}
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta}
+\tikzset{
+  cell/.style={draw, rounded corners, minimum height=7mm, minimum width=11mm, font=\small},
+  op/.style={draw, circle, inner sep=1.4pt, font=\footnotesize},
+  nz/.style={draw, dashed, rounded corners, minimum height=5mm, minimum width=7mm, font=\scriptsize\itshape},
+}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt}
+
+\title{\vspace{-1.5cm}Wildfire and Cloud-Forming Particles, Project Midway Report\\
+{\large A cumulative summary: models, trust checks, and the causal result}}
+\author{Felix Hu, supervised by Prof. Mengxin Yu}
+\date{}
+
+\begin{document}
+\maketitle
+\vspace{-1.1cm}
+
+\section*{The question, in one paragraph}
+Does wildfire smoke reaching the Eastern North Atlantic (ENA) impact the number of
+cloud-condensation nuclei (CCN, the particles clouds form on)? We can't randomize
+wildfires, so we lean on generative models: for each 10-day airmass trajectory we learn
+the \emph{whole distribution} of CCN it could produce, then compare ``with wildfire''
+against ``without'' at the same weather. This report summarizes what matters: the models
+we used, whether we trust them, and what they say.
+
+This project was motivated by Zhou et al.\footnote{S.~Zhou, D.~Qi, H.~Liu, et al., ``A Lagrangian Time-Series Machine Learning Framework for Predicting Concentrations and Exploring Drivers of Atmospheric Aerosols: Model Development and Application to Cloud Condensation Nuclei in the Marine Boundary Layer,'' AGU Fall Meeting 2024, abstract~1650614, \url{https://agu.confex.com/agu/agu24/meetingapp.cgi/Paper/1650614}; preprint: ESS Open Archive, doi:10.22541/essoar.177038612.23579844.}. Unlike the
+paper, which presents a prediction task, we focus on a causal inference task.
+
+\section*{Data and split}
+Each sample is a $10$-day back-trajectory timeseries: $241$ hourly steps $\times$ $22$ weather
+variables, with target $\log_{10}(\mathrm{CCN})$ at arrival. We use the month-block
+(``paper'') split: six alternating months of 2022 are held out, the rest train. 
+This is to mimic the split found in the motivating paper.
+
+\begin{center}
+\begin{tabular}{lll}
+\toprule
+& \textbf{Train} & \textbf{Test} \\
+\midrule
+Trajectories        & $57{,}646$ & $3{,}220$ \\
+Wildfire share      & $11.1\%$   & $12.7\%$ \\
+Independent episodes & $\sim$2{,}400 & $\sim$135 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Two facts to carry forward: wildfire is a \emph{small minority} of the data ($\sim$11\%),
+and adjacent hours are $\sim$99.7\% identical, so the tens of thousands of rows are really
+only a few hundred \emph{independent} episodes.
+
+\section*{The models we used}
+Everything is an \emph{engression} model: a sampler $\widehat{Y}=g(X,\varepsilon)$ that
+takes the weather $X$ plus random noise $\varepsilon$ and returns one possible CCN; draw
+it many times and you trace out $P(Y\mid X)$. Training uses the energy-score (CRPS) loss,
+which rewards the whole predicted distribution, not just its mean. For the observed
+target $y$ and two independent draws $\widehat{Y}=g(X,\varepsilon)$,
+$\widehat{Y}'=g(X,\varepsilon')$ from the model,
+\[
+  \mathcal{L} \;=\; \mathbb{E}\big|\widehat{Y}-y\big|
+  \;-\; \tfrac{1}{2}\,\mathbb{E}\big|\widehat{Y}-\widehat{Y}'\big|.
+\]
+The first term pulls samples toward the truth; the second rewards spread, so the model
+can't collapse to a single point. In practice we minimize its unbiased estimate over $m$
+draws $\widehat{y}_1,\dots,\widehat{y}_m$:
+\[
+  \widehat{\mathcal{L}} \;=\; \frac{1}{m}\sum_{i=1}^{m}\big|\widehat{y}_i-y\big|
+  \;-\; \frac{1}{2m(m-1)}\sum_{i\neq j}\big|\widehat{y}_i-\widehat{y}_j\big|.
+\]
+
+All three generators we carried into the causal analysis share one skeleton: an
+\textbf{LSTM reads the 241-step trajectory}, and a small head turns the result into a
+distribution over CCN. What separates them, and makes them stochastic, is
+\textbf{where the noise enters the recurrence}:
+
+\begin{itemize}
+\item \textbf{Per-timestep.} A fresh, independent $96$-dim noise vector is
+\emph{concatenated onto the $22$ weather inputs at every one of the $241$ steps} (so the
+LSTM input widens $22\!\to\!118$). Because it is re-rolled every step, this one resists
+collapse the best of the three.
+\item \textbf{Global-latent.} The \emph{same} wiring, except a single $96$-dim code $\varepsilon$ is
+drawn \emph{once per trajectory} and concatenated to every step (the same $\varepsilon$ all the way
+through), giving one shared ``latent code'' for the whole sequence.
+\item \textbf{Recurrent.} The odd one out: instead of concatenating noise to the inputs,
+it uses an \texttt{LSTMCell} and \emph{adds} noise directly to the hidden state after each
+step, $h_t \leftarrow h_t + \mathrm{softplus}(s)\,\varepsilon_t$ (with a learned per-unit
+scale $s$). Because the state carries forward, the randomness \textbf{accumulates} through
+the sequence.
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{llll}
+\toprule
+Generator & Noise location & Drawn & Randomness \\
+\midrule
+Per-timestep  & concat.\ to inputs, each step & fresh each step      & independent per step \\
+Global-latent & concat.\ to inputs, each step & once per trajectory  & one shared code \\
+Recurrent     & added to hidden state, each step & fresh each step   & accumulates over time \\
+\bottomrule
+\end{tabular}\\[2pt]
+{\footnotesize All three: noise dim $96$, energy-score loss. Swept configs used downstream:
+per-timestep $5{\times}128$, global-latent $3{\times}128$, recurrent hidden $192$.}
+\end{center}
+
+\begin{figure}[H]
+\centering
+\textbf{(a) Per-timestep}\; {\footnotesize fresh $\varepsilon_t$ concatenated to the inputs, every step}\\[3pt]
+\begin{tikzpicture}[>=Stealth]
+  \node[cell] (c1) {LSTM};
+  \node[cell, right=16mm of c1] (c2) {LSTM};
+  \node[right=6mm of c2] (d) {$\cdots$};
+  \node[cell, right=6mm of d] (hd) {head};
+  \node[right=9mm of hd] (y) {$\widehat{Y}$};
+  \draw[->] (c1)--(c2); \draw[->] (c2)--(d); \draw[->] (d)--(hd); \draw[->] (hd)--(y);
+  \node[op, below=7mm of c1] (k1) {$\|$};
+  \node[op, below=7mm of c2] (k2) {$\|$};
+  \draw[->] (k1)--(c1); \draw[->] (k2)--(c2);
+  \node[below left=6mm and 0mm of k1] (x1) {$x_1$};
+  \node[nz, below right=6mm and 0mm of k1] (e1) {$\varepsilon_1$};
+  \draw[->] (x1)--(k1); \draw[->] (e1)--(k1);
+  \node[below left=6mm and 0mm of k2] (x2) {$x_2$};
+  \node[nz, below right=6mm and 0mm of k2] (e2) {$\varepsilon_2$};
+  \draw[->] (x2)--(k2); \draw[->] (e2)--(k2);
+\end{tikzpicture}\\[12pt]
+\textbf{(b) Global-latent}\; {\footnotesize one $\varepsilon$ drawn per trajectory, concatenated to every step}\\[3pt]
+\begin{tikzpicture}[>=Stealth]
+  \node[cell] (c1) {LSTM};
+  \node[cell, right=16mm of c1] (c2) {LSTM};
+  \node[right=6mm of c2] (d) {$\cdots$};
+  \node[cell, right=6mm of d] (hd) {head};
+  \node[right=9mm of hd] (y) {$\widehat{Y}$};
+  \draw[->] (c1)--(c2); \draw[->] (c2)--(d); \draw[->] (d)--(hd); \draw[->] (hd)--(y);
+  \node[op, below=7mm of c1] (k1) {$\|$};
+  \node[op, below=7mm of c2] (k2) {$\|$};
+  \draw[->] (k1)--(c1); \draw[->] (k2)--(c2);
+  \node[below=6mm of k1] (x1) {$x_1$};
+  \node[below=6mm of k2] (x2) {$x_2$};
+  \draw[->] (x1)--(k1); \draw[->] (x2)--(k2);
+  \node[nz, below=15mm of c1, xshift=8mm] (z) {$\varepsilon$};
+  \draw[->] (z) -- (k1); \draw[->] (z) -- (k2);
+\end{tikzpicture}\\[12pt]
+\textbf{(c) Recurrent}\; {\footnotesize fresh $\varepsilon_t$ added to the hidden state, accumulating}\\[3pt]
+\begin{tikzpicture}[>=Stealth]
+  \node[cell] (c1) {LSTM};
+  \node[op, right=9mm of c1] (a1) {$+$};
+  \node[cell, right=9mm of a1] (c2) {LSTM};
+  \node[op, right=9mm of c2] (a2) {$+$};
+  \node[right=5mm of a2] (d) {$\cdots$};
+  \node[cell, right=5mm of d] (hd) {head};
+  \node[right=9mm of hd] (y) {$\widehat{Y}$};
+  \draw[->] (c1)--(a1); \draw[->] (a1)--(c2); \draw[->] (c2)--(a2); \draw[->] (a2)--(d); \draw[->] (d)--(hd); \draw[->] (hd)--(y);
+  \node[nz, above=6mm of a1] (n1) {$\varepsilon_1$}; \draw[->] (n1)--(a1);
+  \node[nz, above=6mm of a2] (n2) {$\varepsilon_2$}; \draw[->] (n2)--(a2);
+  \node[below=6mm of c1] (x1) {$x_1$}; \draw[->] (x1)--(c1);
+  \node[below=6mm of c2] (x2) {$x_2$}; \draw[->] (x2)--(c2);
+\end{tikzpicture}
+\caption{Where the noise enters each generator (two steps shown). Inputs $x_t$ rise from
+below; the LSTM runs left to right into the head and output $\widehat{Y}$; dashed nodes are
+noise. ``$\|$'' concatenates noise to the inputs (a,\,b); ``$+$'' adds it to the hidden
+state (c). In (a) the noise is fresh each step; in (b) a single $\varepsilon$ feeds every step; in
+(c) it accumulates along the chain.}
+\label{fig:arch}
+\end{figure}
+
+\section*{Do we trust the models?}
+Two checks before believing any causal number.
+
+\textbf{Calibration (PIT).} PIT stands for \emph{probability integral transform}. It
+rests on the fact behind inverse-transform sampling: if $X$ is drawn from a distribution
+with CDF $F$, then $F(X)$ is uniform on $[0,1]$. So we feed each observed CCN through its
+own predicted CDF, and if the model's distribution is right the results should be
+\textbf{uniform}. Concretely, the PIT is just the fraction of the model's predicted
+samples below the true CCN (an empirical $F$). A well-calibrated model then gives a
+\textbf{flat} histogram; a \textbf{U-shape} means overconfident (intervals too narrow). Across all 48 sweep configs
+(Figure~\ref{fig:pit}) most are \emph{mildly} U-shaped, many are a touch overconfident. The best are nearly flat.
+
+\textbf{Is the test weather in-distribution?} The 2022 test weather \emph{is}
+significantly different from training (a classifier tells them apart at AUC $0.79$; an MMD
+permutation test gives $p=0.0008$, driven mostly by carbon monoxide, a smoke tracer). But
+``different'' isn't ``new'': test trajectories still sit \emph{inside} the training
+region (nearest-neighbour distance ratio $1.04$; only $7.4\%$ past the training 95th
+percentile, Figure~\ref{fig:shift}). \textbf{Overlap holds}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\textwidth]{pit_grid_48.png}
+\caption{PIT histograms for all 48 configs. Flat = calibrated; U-shape = overconfident.
+Most are mildly U-shaped, the best near flat.}
+\label{fig:pit}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.48\textwidth}\centering
+\includegraphics[width=\textwidth]{mmd_null.png}\\[-0.2em]{\small (a) MMD: shift is real}
+\end{minipage}\hfill
+\begin{minipage}{0.48\textwidth}\centering
+\includegraphics[width=\textwidth]{knn_overlap.png}\\[-0.2em]{\small (b) but test stays in-support}
+\end{minipage}
+\caption{(a) Observed MMD (red) sits far outside the ``no difference'' null (grey): the
+train/test shift is statistically real. (b) Yet test$\to$train distances (red) track
+train$\to$train (green): the test weather stays inside the training region.}
+\label{fig:shift}
+\end{figure}
+
+\section*{What relates to CCN?}
+No single variable drives CCN (Figure~\ref{fig:corr}). The strongest correlate is
+downwelling solar radiation (\texttt{SWGDN}, $+0.33$), then cloud water, low cloud, and
+wind speed (all $\approx-0.25$). In plain terms, particles show up more on sunny, calm,
+low-cloud days. Pearson and Spearman come out nearly identical, so these one-to-one
+relationships stay close to straight lines, and the real nonlinearity lives in how the
+variables combine. \texttt{CO} is worth a note. Even though it separates train from test
+more than anything else, it barely correlates with CCN by itself; what it really flags is
+\emph{when} smoky air arrives, not how much CCN there is.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.92\textwidth]{correlation_heatmap.png}
+\caption{Correlation of all 23 variables (per-sample trajectory means, $20{,}000$ samples).
+Left = Pearson (linear), right = Spearman (rank). Their near-identity means the marginal
+relationships are close to monotone-linear.}
+\label{fig:corr}
+\end{figure}
+
+\section*{The result: wildfire raises CCN}
+We use a \textbf{T-learner}: train one model on wildfire trajectories and another on
+wildfire-free ones, then run \emph{both} on the same weather. The wildfire model gives the
+real ``with smoke'' CCN; the clean model gives the counterfactual ``what it would have been
+without.'' The gap is the wildfire effect. Both arms use the same stochastic LSTM
+generators from the Models section, and we run the whole T-learner once per architecture:
+per-timestep ($5\times128$), global-latent ($3\times128$), and recurrent (hidden $192$).
+So each row below, and each effect plot, is one complete two-arm T-learner built from that
+architecture.
+
+Our headline number is the \textbf{ATE (average treatment effect)}. This averages the
+effect over \emph{all} test weather, so it captures the typical impact of wildfire across
+conditions.
+\textbf{Wildfire raises CCN by roughly 20--30\%} ($\approx +30$ to $+40$ particles
+cm$^{-3}$), and the whole distribution shifts up with a fatter high tail
+(Figure~\ref{fig:money}). All three generators agree:
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+Generator & \textbf{ATE} (all weather) & ATT (wildfire weather) \\
+\midrule
+Per-timestep  & $+20\%$ & $+10\%$ \\
+Recurrent     & $+31\%$ & $+16\%$ \\
+Global-latent & $+31\%$ & $+24\%$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[H]
+\centering
+\begin{minipage}{0.32\textwidth}\centering
+\includegraphics[width=\linewidth]{money_recurrent_ate.png}\\{\small recurrent: $+31\%$}
+\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\centering
+\includegraphics[width=\linewidth]{money_per_timestep_ate.png}\\{\small per-timestep: $+20\%$}
+\end{minipage}\hfill
+\begin{minipage}{0.32\textwidth}\centering
+\includegraphics[width=\linewidth]{money_global_latent_ate.png}\\{\small global-latent: $+31\%$}
+\end{minipage}
+\caption{ATE view: CCN with wildfire (red) vs.\ the counterfactual without (green),
+both evaluated over \emph{all} held-out test weather. Every generator shifts the
+distribution up (dashed = means) with a fatter high tail. Horizontal axis is a log scale.}
+\label{fig:money}
+\end{figure}
+
+\textbf{ATE vs.\ ATT, what the two numbers mean.} The ATT (right column) is the effect
+restricted to weather that actually occurred \emph{during} wildfire periods; it is smaller
+($+10$ to $+24\%$). The ATE is larger because it also asks ``what would wildfire do to the
+\emph{clean}-weather days?'', which forces the wildfire model to predict on conditions
+it saw few of, so part of the gap between ATE and ATT reflects that extrapolation. Read the
+ATE as the broad average effect and the ATT as the conservative, in-support lower bound.
+
+\section*{Caveats and bottom line}
+The estimate assumes the $22$ weather variables capture everything that differs between
+wildfire and clean air (ignorability); there are no formal error bars yet, and the
+number of independent wildfire episodes is smaller than the number of observations, so read $+20\%$ to $+31\%$ as
+a range, not exact figures. Because the ATE averages over all conditions, it leans partly
+on the (data-poor) wildfire model extrapolating onto clean weather.
+
+\textbf{Bottom line:} across three different stochastic generators, wildfire smoke raises
+cloud-forming particles at ENA by roughly \textbf{20--30\%} on average (ATE), or a more
+conservative \textbf{10--24\%} restricted to wildfire conditions (ATT). The models are
+reasonably calibrated and the test weather stays in-support, so the direction and rough
+size are on solid ground.
+
+\end{document}

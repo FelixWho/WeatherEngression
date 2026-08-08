@@ -17,12 +17,21 @@ Run:
 from __future__ import annotations
 
 import argparse
+import json
+import os
 import pickle
-from pathlib import Path
 import sys
+import tempfile
+from pathlib import Path
 
 import numpy as np
 import torch
+
+# Headless plotting (compute nodes have no display / writable HOME cache).
+os.environ.setdefault("MPLCONFIGDIR", str(Path(tempfile.gettempdir()) / "mplconfig_tlearner"))
+import matplotlib  # noqa: E402
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt  # noqa: E402
 
 REPO_ROOT = Path(__file__).resolve().parents[2]  # experiments/t_learner/test.py -> repo root
 if str(REPO_ROOT) not in sys.path:
@@ -136,44 +145,98 @@ def energy_loss(engressor: LSTMEngressor, xs: np.ndarray, ys: np.ndarray, n_samp
 
 
 # --------------------------------------------------------------------------- #
-# TODO: estimation -- fill these in.
+# Per-arm calibration: coverage + PIT, on the arm's OWN held-out test set.
 # --------------------------------------------------------------------------- #
-def distributional_treatment_effect(with_wildfire, counterfactual_clean, quantiles=None):
-    """TODO: the headline (distributional ATT).
+def arm_calibration(engressor: LSTMEngressor, x: np.ndarray, y: np.ndarray,
+                    n_samples: int = 400, seed: int = 0) -> dict:
+    """Coverage (50%/90%) + randomized PIT for one arm on its own test set.
 
-    Pool the draws across units, then difference the two distributions
-    quantile-by-quantile: ``QTE(tau) = Q_withwildfire(tau) - Q_clean(tau)``.
-    Return the QTE curve plus the scalar mean effect (mean ATT).
+    Draw samples at x, compare to realized y. PIT = rank of y among the samples
+    (randomized so it's exactly Uniform(0,1) under correct predictive shape).
     """
-    raise NotImplementedError
+    y = np.asarray(y, dtype=np.float64).reshape(-1)
+    samples = sample_conditional(engressor, torch.as_tensor(x, dtype=torch.float32), n_samples)  # (n, S)
+    q05, q25, q50, q75, q95 = np.quantile(samples, [0.05, 0.25, 0.5, 0.75, 0.95], axis=1)
+    below = np.sum(samples < y[:, None], axis=1)
+    at_or_below = np.sum(samples <= y[:, None], axis=1)
+    u = np.random.default_rng(seed).random(len(y))
+    pit = (below + u * (at_or_below - below + 1)) / (n_samples + 1)
+    return {
+        "coverage_90": float(np.mean((y >= q05) & (y <= q95))),
+        "coverage_50": float(np.mean((y >= q25) & (y <= q75))),
+        "mean_width_90": float(np.mean(q95 - q05)),
+        "median_abs_error": float(np.mean(np.abs(y - q50))),
+        "pit": pit,
+    }
 
 
-def cate(with_wildfire, counterfactual_clean):
-    """TODO: per-unit effect (CATE / heterogeneity view).
+# --------------------------------------------------------------------------- #
+# Effect estimands: run BOTH arms at the SAME covariates, then difference.
+#   average over wildfire x -> ATT ; clean x -> ATC ; all x -> ATE
+# --------------------------------------------------------------------------- #
+def estimand(eng_wildfire: LSTMEngressor, eng_no_wildfire: LSTMEngressor,
+             x: np.ndarray, n_samples: int = 400) -> dict:
+    """Treatment effect at covariates ``x``: effect(x) = wildfire(x) - clean(x).
 
-    For each covariate row, effect = summary(with_wildfire[i]) - summary(clean[i])
-    (e.g. mean, or a per-quantile difference). Return one effect per unit so its
-    spread describes where the effect is large vs small.
+    Both arms are sampled at the SAME x (that's what makes it causal, not a
+    smoky-vs-clean comparison). Returns the mean effect in log10(CCN), the
+    multiplicative ratio 10**mean, the raw-CCN mean difference, and the pooled
+    factual / counterfactual sample sets (for the money plot).
     """
-    raise NotImplementedError
+    xt = torch.as_tensor(x, dtype=torch.float32)
+    with_wildfire = sample_conditional(eng_wildfire, xt, n_samples)        # (n, S) log10 CCN
+    counterfactual = sample_conditional(eng_no_wildfire, xt, n_samples)    # (n, S) log10 CCN
+    per_x_effect = with_wildfire.mean(axis=1) - counterfactual.mean(axis=1)  # log10, per period
+    mean_log = float(per_x_effect.mean())
+    factual_pool = with_wildfire.reshape(-1)
+    counterfactual_pool = counterfactual.reshape(-1)
+    mean_raw = float((10.0 ** factual_pool).mean() - (10.0 ** counterfactual_pool).mean())
+    return {
+        "n_periods": int(len(x)),
+        "mean_log_effect": mean_log,                 # Δ in log10(CCN)
+        "ratio": float(10.0 ** mean_log),            # wildfire CCN / clean CCN (×)
+        "mean_raw_ccn_effect": mean_raw,             # Δ in CCN (cm^-3)
+        "factual": factual_pool,
+        "counterfactual": counterfactual_pool,
+    }
 
 
-def episode_bootstrap(dataset, arm_idx, estimator, n_boot: int = 500, seed: int = 0):
-    """TODO: uncertainty via BLOCK bootstrap over wildfire episodes (~150), not rows.
+# --------------------------------------------------------------------------- #
+# Charts.
+# --------------------------------------------------------------------------- #
+def plot_pit(pit: np.ndarray, title: str, out_path: Path, n_bins: int = 20) -> None:
+    """PIT histogram with the uniform line + 95% consistency band."""
+    n = len(pit)
+    counts, edges = np.histogram(pit, bins=n_bins, range=(0.0, 1.0))
+    expected = n / n_bins
+    half = 1.96 * np.sqrt(n * (1.0 / n_bins) * (1.0 - 1.0 / n_bins))
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    ax.bar(edges[:-1], counts, width=np.diff(edges), align="edge",
+           color="#4c72b0", alpha=0.75, edgecolor="white")
+    ax.axhline(expected, ls="--", color="#2a2a2a", alpha=0.8, label="calibrated (uniform)")
+    ax.fill_between([0.0, 1.0], expected - half, expected + half, color="#dd8452", alpha=0.2,
+                    label="95% band")
+    ax.set_xlim(0, 1); ax.set_ylim(0, max(counts.max(), expected + half) * 1.15)
+    ax.set_xlabel("PIT value"); ax.set_ylabel("count"); ax.set_title(title)
+    ax.legend(fontsize="small")
+    fig.tight_layout(); fig.savefig(out_path, dpi=130); plt.close(fig)
 
-    Group ``arm_idx`` into contiguous episodes (consecutive time indices), resample
-    whole episodes with replacement, re-run ``estimator`` on each resample, and
-    collect the distribution of the effect -> CIs. Row-level bootstrap would be
-    overconfident because hourly samples are near-duplicates.
-    """
-    raise NotImplementedError
 
-
-def report(effect, ci=None, out_dir: Path | None = None):
-    """TODO: write the deliverable -- the money plot (factual vs counterfactual
-    distributions), the QTE curve, and a metrics JSON. Left for you to style.
-    """
-    raise NotImplementedError
+def plot_money(factual: np.ndarray, counterfactual: np.ndarray, title: str, out_path: Path) -> None:
+    """The money plot: pooled factual vs counterfactual CCN distributions overlaid."""
+    lo = float(min(factual.min(), counterfactual.min()))
+    hi = float(max(factual.max(), counterfactual.max()))
+    bins = np.linspace(lo, hi, 60)
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.hist(counterfactual, bins=bins, density=True, alpha=0.55, color="#55a868",
+            label="counterfactual: no wildfire")
+    ax.hist(factual, bins=bins, density=True, alpha=0.55, color="#c44e52",
+            label="factual: with wildfire")
+    ax.axvline(counterfactual.mean(), color="#55a868", ls="--", lw=1.5)
+    ax.axvline(factual.mean(), color="#c44e52", ls="--", lw=1.5)
+    ax.set_xlabel("log10(CCN)"); ax.set_ylabel("density"); ax.set_title(title)
+    ax.legend(fontsize="small")
+    fig.tight_layout(); fig.savefig(out_path, dpi=130); plt.close(fig)
 
 
 # --------------------------------------------------------------------------- #
@@ -184,6 +247,9 @@ def _build_parser() -> argparse.ArgumentParser:
     p.add_argument("--which", choices=("best", "latest"), default="best")
     p.add_argument("--device", type=str, default=None, help="cuda / cpu (default: auto)")
     p.add_argument("--n-samples", type=int, default=400, help="conditional draws per covariate")
+    p.add_argument("--out-dir", type=str, default="reports/t_learner_effect",
+                   help="Where to write charts + metrics.json (repo-relative).")
+    p.add_argument("--seed", type=int, default=0, help="seed for the randomized PIT tie-break")
     # No split params needed: the dataset + arm indices are read from the pickles
     # under <checkpoint-dir>/dataset/, so they always match the trained models.
     return p
@@ -210,33 +276,60 @@ def main() -> None:
         device=args.device,
     )
 
-    print("Loaded checkpointed arms and dataset")
+    print("Loaded checkpointed arms and dataset", flush=True)
+    out_dir = Path(args.out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-    # 2) Headline = ATT: evaluate at the wildfire-period TEST covariates.
-    #    (For ATE use all test covariates; for ATC use test_no_wildfire_idx.)
-    eval_idx = test_wildfire_idx
-    test_wildfire_x = dataset.x[test_wildfire_idx]
-    test_wildfire_y = dataset.y[test_wildfire_idx]
-    test_no_wildfire_x = dataset.x[test_no_wildfire_idx]
-    test_no_wildfire_y = dataset.y[test_no_wildfire_idx]
+    # Covariates + realized targets for each arm's own held-out test set.
+    xw, yw = dataset.x[test_wildfire_idx], dataset.y[test_wildfire_idx]
+    xc, yc = dataset.x[test_no_wildfire_idx], dataset.y[test_no_wildfire_idx]
 
-    # with_wildfire, counterfactual_clean = counterfactual_pair(
-    #     eng_wildfire, eng_no_wildfire, x_eval, n_samples=args.n_samples
-    # )
-    loss_score_wildfire = energy_loss(
-        eng_wildfire,
-        test_wildfire_x,
-        test_wildfire_y,
-        n_samples_per_x=args.n_samples,
-    )
-    loss_score_no_wildfire = energy_loss(
-        eng_no_wildfire,
-        test_no_wildfire_x,
-        test_no_wildfire_y,
-        n_samples_per_x=args.n_samples,
-    )
-    print("Wildfire crps:", loss_score_wildfire)
-    print("No wildfire crps:", loss_score_no_wildfire)
+    # --- 1) Per-arm quality: CRPS + coverage + PIT, each on its OWN test set. ---
+    crps_wildfire = energy_loss(eng_wildfire, xw, yw, n_samples_per_x=args.n_samples)
+    crps_clean = energy_loss(eng_no_wildfire, xc, yc, n_samples_per_x=args.n_samples)
+    cal_wildfire = arm_calibration(eng_wildfire, xw, yw, args.n_samples, seed=args.seed)
+    cal_clean = arm_calibration(eng_no_wildfire, xc, yc, args.n_samples, seed=args.seed)
+    plot_pit(cal_wildfire["pit"], "PIT - wildfire arm (own test set)", out_dir / "pit_wildfire.png")
+    plot_pit(cal_clean["pit"], "PIT - clean arm (own test set)", out_dir / "pit_clean.png")
+
+    # --- 2) Effects: ATT (wildfire x), ATC (clean x), ATE (all x). ---
+    att = estimand(eng_wildfire, eng_no_wildfire, xw, args.n_samples)
+    atc = estimand(eng_wildfire, eng_no_wildfire, xc, args.n_samples)
+    ate = estimand(eng_wildfire, eng_no_wildfire, np.concatenate([xw, xc], axis=0), args.n_samples)
+
+    # --- 3) Money plot from ATT (the headline). ---
+    plot_money(att["factual"], att["counterfactual"],
+               "With wildfire vs counterfactual no-wildfire (ATT)", out_dir / "money_plot.png")
+
+    # --- 4) Write metrics.json (drop the big sample arrays). ---
+    def _effect(d):
+        return {k: d[k] for k in ("n_periods", "mean_log_effect", "ratio", "mean_raw_ccn_effect")}
+    metrics = {
+        "checkpoint_dir": str(args.checkpoint_dir),
+        "n_samples": args.n_samples,
+        "arms": {
+            "wildfire": {"n_test": int(len(yw)), "crps": crps_wildfire,
+                         "coverage_90": cal_wildfire["coverage_90"], "coverage_50": cal_wildfire["coverage_50"],
+                         "mean_width_90": cal_wildfire["mean_width_90"]},
+            "clean": {"n_test": int(len(yc)), "crps": crps_clean,
+                      "coverage_90": cal_clean["coverage_90"], "coverage_50": cal_clean["coverage_50"],
+                      "mean_width_90": cal_clean["mean_width_90"]},
+        },
+        "effects": {"ATT": _effect(att), "ATC": _effect(atc), "ATE": _effect(ate)},
+    }
+    (out_dir / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n", encoding="utf-8")
+
+    # --- 5) Console summary. ---
+    print("\n=== per-arm quality (each on its own test set) ===", flush=True)
+    print(f"  wildfire arm: CRPS {crps_wildfire:.4f} | cov90 {cal_wildfire['coverage_90']:.3f} "
+          f"| cov50 {cal_wildfire['coverage_50']:.3f} | width90 {cal_wildfire['mean_width_90']:.3f}")
+    print(f"  clean    arm: CRPS {crps_clean:.4f} | cov90 {cal_clean['coverage_90']:.3f} "
+          f"| cov50 {cal_clean['coverage_50']:.3f} | width90 {cal_clean['mean_width_90']:.3f}")
+    print("\n=== wildfire effect on CCN (log10 Δ | ×ratio | raw Δ cm^-3) ===", flush=True)
+    for name, d in (("ATT", att), ("ATC", atc), ("ATE", ate)):
+        print(f"  {name} (n={d['n_periods']:5d}): {d['mean_log_effect']:+.3f} log10 "
+              f"| {d['ratio']:.2f}x | {d['mean_raw_ccn_effect']:+.1f} cm^-3")
+    print(f"\nwrote charts + metrics.json to: {out_dir.resolve()}", flush=True)
 
 
 if __name__ == "__main__":

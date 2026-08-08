@@ -64,6 +64,14 @@ data/
 
 # Generated figures and report build products
 figures/
+# ...including inside report subfolders (charts/PDFs are regenerable from slurm jobs)
+reports/**/*.png
+reports/**/*.pdf
+reports/**/*.aux
+reports/**/*.log
+reports/**/*.out
+reports/**/*.toc
+reports/**/*.synctex.gz
 reports/*.aux
 reports/*.bbl
 reports/*.bcf
@@ -84,3 +92,6 @@ runs/**
 !runs/**/
 !runs/**/README.md
 !runs/**/.gitkeep
+
+# SLURM run logs (regenerable job output)
+slurm/**/*.log

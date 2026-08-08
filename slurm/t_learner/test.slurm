@@ -44,6 +44,7 @@ python -u -m experiments.t_learner.test \
   --checkpoint-dir "${CHECKPOINT_DIR}" \
   --which best \
   --n-samples 400 \
+  --out-dir "${OUT_DIR:-reports/t_learner_effect}" \
   --device cuda
 
-echo "done."
+echo "done. charts + metrics.json -> ${OUT_DIR:-reports/t_learner_effect}/"

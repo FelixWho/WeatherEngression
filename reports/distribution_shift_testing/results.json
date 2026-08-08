@@ -1,0 +1,584 @@
+{
+  "params": {
+    "device": "cuda",
+    "split": "paper",
+    "seed": 2026,
+    "decorrelate_stride": 24,
+    "n_repeats": 5,
+    "epochs": 60,
+    "reference_size": 4000,
+    "out_dir": "reports/distribution_shift_testing"
+  },
+  "n_full_train": 2402,
+  "c2st": {
+    "n_features": 132,
+    "n_train_rows": 2402,
+    "n_test_rows": 135,
+    "mlp_auc_mean": 0.7878016643550624,
+    "mlp_auc_std": 0.022283954444910794,
+    "linear_auc_mean": 0.7274549237170597,
+    "linear_auc_std": 0.034062296666114725,
+    "mlp_auc_per_repeat": [
+      0.7769070735090152,
+      0.753120665742025,
+      0.819868238557559,
+      0.799133148404993,
+      0.7899791955617198
+    ],
+    "importance_table": [
+      {
+        "feature": "CO^(1/5)::min",
+        "auc_drop": 0.03321081830790571
+      },
+      {
+        "feature": "CO^(1/5)::tend",
+        "auc_drop": 0.025325936199722565
+      },
+      {
+        "feature": "P::tend",
+        "auc_drop": 0.023425797503467405
+      },
+      {
+        "feature": "CFLOW::mean",
+        "auc_drop": 0.019556171983356442
+      },
+      {
+        "feature": "CO^(1/5)::mean",
+        "auc_drop": 0.015506241331484039
+      },
+      {
+        "feature": "T::std",
+        "auc_drop": 0.011067961165048535
+      },
+      {
+        "feature": "CHL^(1/2)::mean",
+        "auc_drop": 0.010894590846047159
+      },
+      {
+        "feature": "SO2EM^(1/5)::tend",
+        "auc_drop": 0.010090152565880705
+      },
+      {
+        "feature": "SO2EM^(1/5)::mean",
+        "auc_drop": 0.009285714285714253
+      },
+      {
+        "feature": "SLP::tend",
+        "auc_drop": 0.008613037447988891
+      },
+      {
+        "feature": "CO^(1/5)::std",
+        "auc_drop": 0.008162274618585296
+      },
+      {
+        "feature": "LWC^(1/5)::tend",
+        "auc_drop": 0.00785020804438279
+      },
+      {
+        "feature": "DUST^(1/5)::tend",
+        "auc_drop": 0.007454923717059625
+      },
+      {
+        "feature": "RH::std",
+        "auc_drop": 0.0063453536754507715
+      },
+      {
+        "feature": "PREC^(1/5)::max",
+        "auc_drop": 0.006019417475728139
+      },
+      {
+        "feature": "CFLOW::std",
+        "auc_drop": 0.005852981969486826
+      },
+      {
+        "feature": "OMEGA::min",
+        "auc_drop": 0.005617198335644935
+      },
+      {
+        "feature": "CHL^(1/2)::std",
+        "auc_drop": 0.005547850208044403
+      },
+      {
+        "feature": "DUST^(1/5)::t0",
+        "auc_drop": 0.005513176144244092
+      },
+      {
+        "feature": "LWP^(1/5)::max",
+        "auc_drop": 0.00550624133148403
+      },
+      {
+        "feature": "DMS^(1/2)::std",
+        "auc_drop": 0.005291262135922325
+      },
+      {
+        "feature": "T::min",
+        "auc_drop": 0.0051317614424410294
+      },
+      {
+        "feature": "SLP::t0",
+        "auc_drop": 0.004993065187239942
+      },
+      {
+        "feature": "SLP::mean",
+        "auc_drop": 0.004757281553398052
+      },
+      {
+        "feature": "DUST^(1/5)::std",
+        "auc_drop": 0.004660194174757293
+      },
+      {
+        "feature": "LAND::mean",
+        "auc_drop": 0.004424410540915402
+      },
+      {
+        "feature": "LTS::tend",
+        "auc_drop": 0.004348127600554763
+      },
+      {
+        "feature": "TS::std",
+        "auc_drop": 0.0042441054091539865
+      },
+      {
+        "feature": "EPV::mean",
+        "auc_drop": 0.004029126213592238
+      },
+      {
+        "feature": "EPV::t0",
+        "auc_drop": 0.003897364771151146
+      },
+      {
+        "feature": "CFLOW::max",
+        "auc_drop": 0.003841886269070738
+      },
+      {
+        "feature": "SWGDN::max",
+        "auc_drop": 0.0036199722607489714
+      },
+      {
+        "feature": "DMS^(1/2)::max",
+        "auc_drop": 0.0035020804438280263
+      },
+      {
+        "feature": "CFMID::mean",
+        "auc_drop": 0.0034812760055478397
+      },
+      {
+        "feature": "SWGDN::mean",
+        "auc_drop": 0.0034674063800277377
+      },
+      {
+        "feature": "DUST^(1/5)::mean",
+        "auc_drop": 0.003404993065187223
+      },
+      {
+        "feature": "TS::max",
+        "auc_drop": 0.0033564493758668546
+      },
+      {
+        "feature": "CFMID::max",
+        "auc_drop": 0.003252427184465989
+      },
+      {
+        "feature": "LWP^(1/5)::mean",
+        "auc_drop": 0.003245492371705949
+      },
+      {
+        "feature": "DMS^(1/2)::mean",
+        "auc_drop": 0.003120665742024964
+      },
+      {
+        "feature": "LAND::t0",
+        "auc_drop": 0.0030651872399445335
+      },
+      {
+        "feature": "CO^(1/5)::t0",
+        "auc_drop": 0.002656033287101245
+      },
+      {
+        "feature": "TS::mean",
+        "auc_drop": 0.002468793342579745
+      },
+      {
+        "feature": "CFLOW::min",
+        "auc_drop": 0.002454923717059643
+      },
+      {
+        "feature": "WS::std",
+        "auc_drop": 0.002378640776699026
+      },
+      {
+        "feature": "SO2EM^(1/5)::max",
+        "auc_drop": 0.002295423023578369
+      },
+      {
+        "feature": "T::mean",
+        "auc_drop": 0.0022884882108182847
+      },
+      {
+        "feature": "P::t0",
+        "auc_drop": 0.0022052704576976502
+      },
+      {
+        "feature": "PREC^(1/5)::mean",
+        "auc_drop": 0.0021705963938973396
+      },
+      {
+        "feature": "LTS::max",
+        "auc_drop": 0.002122052704576971
+      },
+      {
+        "feature": "LWP^(1/5)::std",
+        "auc_drop": 0.0020735090152565806
+      },
+      {
+        "feature": "LTS::std",
+        "auc_drop": 0.0018446601941747298
+      },
+      {
+        "feature": "LAND::max",
+        "auc_drop": 0.0017961165048543614
+      },
+      {
+        "feature": "PBLH^(1/5)::t0",
+        "auc_drop": 0.0016574202496532297
+      },
+      {
+        "feature": "P::mean",
+        "auc_drop": 0.0016435506241331498
+      },
+      {
+        "feature": "PREC^(1/5)::tend",
+        "auc_drop": 0.0016088765603328615
+      },
+      {
+        "feature": "CFLOW::t0",
+        "auc_drop": 0.0014909847434119382
+      },
+      {
+        "feature": "T::max",
+        "auc_drop": 0.0014632454923716898
+      },
+      {
+        "feature": "SO2EM^(1/5)::std",
+        "auc_drop": 0.0013592233009708688
+      },
+      {
+        "feature": "DUST^(1/5)::max",
+        "auc_drop": 0.0012552011095700254
+      },
+      {
+        "feature": "DMS^(1/2)::t0",
+        "auc_drop": 0.0012205270457697592
+      },
+      {
+        "feature": "SWGDN::std",
+        "auc_drop": 0.0011511789181691823
+      },
+      {
+        "feature": "RH::mean",
+        "auc_drop": 0.0011442441054091423
+      },
+      {
+        "feature": "OMEGA::std",
+        "auc_drop": 0.001123439667128978
+      },
+      {
+        "feature": "SO2EM^(1/5)::t0",
+        "auc_drop": 0.0010610263522884411
+      },
+      {
+        "feature": "EPV::min",
+        "auc_drop": 0.0010402219140083213
+      },
+      {
+        "feature": "T::t0",
+        "auc_drop": 0.0009500693481276024
+      },
+      {
+        "feature": "LWC^(1/5)::max",
+        "auc_drop": 0.0009431345353675402
+      },
+      {
+        "feature": "PBLH^(1/5)::mean",
+        "auc_drop": 0.0009361997226075003
+      },
+      {
+        "feature": "LAND::std",
+        "auc_drop": 0.0008668515950069455
+      },
+      {
+        "feature": "CHL^(1/2)::t0",
+        "auc_drop": 0.0008183079056865328
+      },
+      {
+        "feature": "LWP^(1/5)::min",
+        "auc_drop": 0.0008044382801664085
+      },
+      {
+        "feature": "LTS::mean",
+        "auc_drop": 0.0006865464632454854
+      },
+      {
+        "feature": "LWC^(1/5)::std",
+        "auc_drop": 0.0006726768377253612
+      },
+      {
+        "feature": "CHL^(1/2)::min",
+        "auc_drop": 0.0006241331484049927
+      },
+      {
+        "feature": "WS::max",
+        "auc_drop": 0.0005617198335645002
+      },
+      {
+        "feature": "CFMID::t0",
+        "auc_drop": 0.0005409153952843137
+      },
+      {
+        "feature": "P::min",
+        "auc_drop": 0.0005270457697642116
+      },
+      {
+        "feature": "PBLH^(1/5)::std",
+        "auc_drop": 0.00044382801664353264
+      },
+      {
+        "feature": "CFMID::tend",
+        "auc_drop": 0.00035367545076283593
+      },
+      {
+        "feature": "CHL^(1/2)::max",
+        "auc_drop": 0.00029819694868240545
+      },
+      {
+        "feature": "OMEGA::tend",
+        "auc_drop": 0.0002981969486823832
+      },
+      {
+        "feature": "WS::mean",
+        "auc_drop": 0.00028432732316225896
+      },
+      {
+        "feature": "CO^(1/5)::max",
+        "auc_drop": 0.00018030513176143793
+      },
+      {
+        "feature": "LWC^(1/5)::mean",
+        "auc_drop": 6.934812760053254e-05
+      },
+      {
+        "feature": "SO2EM^(1/5)::min",
+        "auc_drop": 0.0
+      },
+      {
+        "feature": "LAND::min",
+        "auc_drop": 0.0
+      },
+      {
+        "feature": "LAND::tend",
+        "auc_drop": 0.0
+      },
+      {
+        "feature": "SWGDN::min",
+        "auc_drop": 0.0
+      },
+      {
+        "feature": "PREC^(1/5)::min",
+        "auc_drop": 0.0
+      },
+      {
+        "feature": "SWGDN::tend",
+        "auc_drop": -4.854368932039055e-05
+      },
+      {
+        "feature": "PBLH^(1/5)::max",
+        "auc_drop": -9.015256588074116e-05
+      },
+      {
+        "feature": "CFMID::min",
+        "auc_drop": -0.0001178918169209453
+      },
+      {
+        "feature": "PREC^(1/5)::std",
+        "auc_drop": -0.0001178918169209453
+      },
+      {
+        "feature": "LWP^(1/5)::tend",
+        "auc_drop": -0.00015256588072123378
+      },
+      {
+        "feature": "EPV::std",
+        "auc_drop": -0.00022191400832178855
+      },
+      {
+        "feature": "T::tend",
+        "auc_drop": -0.00032593619972263175
+      },
+      {
+        "feature": "WS::tend",
+        "auc_drop": -0.000450762829403617
+      },
+      {
+        "feature": "PBLH^(1/5)::min",
+        "auc_drop": -0.00047850208044382115
+      },
+      {
+        "feature": "CHL^(1/2)::tend",
+        "auc_drop": -0.000540915395284336
+      },
+      {
+        "feature": "TS::t0",
+        "auc_drop": -0.0006518723994452192
+      },
+      {
+        "feature": "DMS^(1/2)::tend",
+        "auc_drop": -0.0007489597780860002
+      },
+      {
+        "feature": "OMEGA::t0",
+        "auc_drop": -0.000832177531206657
+      },
+      {
+        "feature": "CFLOW::tend",
+        "auc_drop": -0.0009292649098474381
+      },
+      {
+        "feature": "LTS::min",
+        "auc_drop": -0.0009361997226075003
+      },
+      {
+        "feature": "SLP::min",
+        "auc_drop": -0.0009361997226075225
+      },
+      {
+        "feature": "P::std",
+        "auc_drop": -0.0010540915395284677
+      },
+      {
+        "feature": "EPV::tend",
+        "auc_drop": -0.001178918169209453
+      },
+      {
+        "feature": "DUST^(1/5)::min",
+        "auc_drop": -0.0013037447988904604
+      },
+      {
+        "feature": "SWGDN::t0",
+        "auc_drop": -0.0013176144244105403
+      },
+      {
+        "feature": "TS::min",
+        "auc_drop": -0.0013384188626907267
+      },
+      {
+        "feature": "EPV::max",
+        "auc_drop": -0.0014216366158113837
+      },
+      {
+        "feature": "RH::min",
+        "auc_drop": -0.0014771151178918362
+      },
+      {
+        "feature": "LWC^(1/5)::t0",
+        "auc_drop": -0.0016990291262135803
+      },
+      {
+        "feature": "OMEGA::max",
+        "auc_drop": -0.0018585298196948986
+      },
+      {
+        "feature": "SLP::std",
+        "auc_drop": -0.001934812760055493
+      },
+      {
+        "feature": "WS::min",
+        "auc_drop": -0.0020041608876560256
+      },
+      {
+        "feature": "PREC^(1/5)::t0",
+        "auc_drop": -0.002122052704576971
+      },
+      {
+        "feature": "LWP^(1/5)::t0",
+        "auc_drop": -0.0022191400832177965
+      },
+      {
+        "feature": "TS::tend",
+        "auc_drop": -0.002281553398058267
+      },
+      {
+        "feature": "OMEGA::mean",
+        "auc_drop": -0.0023370319001386974
+      },
+      {
+        "feature": "DMS^(1/2)::min",
+        "auc_drop": -0.0025450762829403394
+      },
+      {
+        "feature": "CFMID::std",
+        "auc_drop": -0.0026490984743411604
+      },
+      {
+        "feature": "LWC^(1/5)::min",
+        "auc_drop": -0.002815533980582541
+      },
+      {
+        "feature": "RH::t0",
+        "auc_drop": -0.0028432732316227447
+      },
+      {
+        "feature": "RH::tend",
+        "auc_drop": -0.002940360610263526
+      },
+      {
+        "feature": "P::max",
+        "auc_drop": -0.0034604715672676978
+      },
+      {
+        "feature": "RH::max",
+        "auc_drop": -0.00385575589459084
+      },
+      {
+        "feature": "WS::t0",
+        "auc_drop": -0.004805825242718465
+      },
+      {
+        "feature": "PBLH^(1/5)::tend",
+        "auc_drop": -0.004909847434119286
+      },
+      {
+        "feature": "LTS::t0",
+        "auc_drop": -0.005312066574202512
+      },
+      {
+        "feature": "SLP::max",
+        "auc_drop": -0.006830790568654654
+      }
+    ]
+  },
+  "knn_overlap": {
+    "reference_size": 2402,
+    "n_test_rows": 135,
+    "train_nn_median": 8.006561279296875,
+    "test_nn_median": 8.363426208496094,
+    "median_ratio": 1.0445715188980103,
+    "train_nn_quantiles": {
+      "0.5": 8.006561279296875,
+      "0.9": 9.906548500061035,
+      "0.95": 10.799318313598633,
+      "0.99": 12.534585952758789
+    },
+    "test_nn_quantiles": {
+      "0.5": 8.363426208496094,
+      "0.9": 10.360100746154785,
+      "0.95": 11.799549102783203,
+      "0.99": 13.425127983093262
+    },
+    "frac_test_beyond_train_p95": 0.07407407407407407,
+    "frac_test_beyond_train_p99": 0.037037037037037035
+  },
+  "interpretation": {
+    "c2st": "AUC ~0.5 no shift; >0.6 clear shift. MLP>>linear => nonlinear shift.",
+    "knn": "median_ratio ~1 and small beyond-p95 => test stays in train support."
+  }
+}

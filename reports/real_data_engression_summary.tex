@@ -26,10 +26,11 @@
 
 \section{Model Architectures}
 
-All models learn a conditional sampler \(\widehat{Y}=g(X,\varepsilon)\) with fresh
-noise \(\varepsilon\) per draw, trained with the energy-score (CRPS) loss; repeated
-draws approximate \(P(Y\mid X)\). They differ in how \(X\) is read and where
-\(\varepsilon\) enters.
+Every model is just a sampler \(\widehat{Y}=g(X,\varepsilon)\): feed in the weather
+\(X\) plus a shot of random noise \(\varepsilon\) and you get one possible CCN; draw
+many times and you trace out the whole distribution \(P(Y\mid X)\). All are trained the
+same way (the energy-score / CRPS loss). The only thing that changes between them is how
+\(X\) is read and where the noise goes in.
 
 \begin{itemize}
   \item \textbf{Built-in (vanilla).} The public \texttt{engression} model: \(X\) is
@@ -47,8 +48,9 @@ draws approximate \(P(Y\mid X)\). They differ in how \(X\) is read and where
 \end{itemize}
 
 \noindent
-Noise enters late, after a deterministic encoder: the uncertainty is in the scalar
-target, and noise injected deep into a 241-step recurrence tends to be forgotten.
+In every case the noise enters late, after a deterministic encoder --- the randomness
+lives in the final CCN, and noise pushed deep into a 241-step recurrence tends to get
+washed out.
 
 \begin{figure}[H]
   \centering
@@ -138,20 +140,18 @@ target, and noise injected deep into a 241-step recurrence tends to be forgotten
 
 \section{Experimental Setup}
 
-\textbf{Data.} Eastern North Atlantic (ENA) observations. Each sample is a
-$10$-day airmass back-trajectory of $241$ hourly time steps $\times$ $22$ weather
-variables; the target is $\log_{10}(\mathrm{CCN})$, the cloud-condensation-nuclei
-concentration at arrival. After dropping samples with a missing target there are
-$\approx 60{,}866$ usable trajectories.
+\textbf{Data.} Eastern North Atlantic (ENA). Each sample is a $10$-day airmass
+back-trajectory --- $241$ hourly steps $\times$ $22$ weather variables --- and we
+predict $\log_{10}(\mathrm{CCN})$, the cloud-particle count when the air arrives.
+Dropping samples with a missing target leaves $\approx 60{,}866$ trajectories.
 
 \medskip
 \noindent
-\textbf{Train/test split (``paper'' split).} Six alternating months of 2022 (Jan,
-Mar, May, Jul, Sep, Nov) are the test set; all other months train. Whole-month
-blocks prevent autocorrelated neighbouring hours from leaking across the split.
-This gives $57{,}646$ training and $3{,}220$ test trajectories. Since the held-out
-months are interleaved with training months, this is \emph{in-distribution /
-interpolation}, not extrapolation.
+\textbf{Train/test split (``paper'' split).} The test set is six alternating months of
+2022 (Jan, Mar, May, Jul, Sep, Nov); everything else trains --- $57{,}646$ train vs
+$3{,}220$ test. Using whole-month blocks stops near-identical neighbouring hours from
+leaking across the split. Since the test months sit between training months, this tests
+\emph{interpolation}, not extrapolation.
 
 \medskip
 \noindent
@@ -162,13 +162,13 @@ instead flattens each trajectory to $241\times 22 = 5302$ features.
 \section{In-Sample Performance}
 \label{sec:insample}
 
-We score the predictive distribution against the held-out (in-distribution)
-targets with: 90\% interval coverage (nominal $0.90$; closer is better),
-interval width (smaller = sharper), median absolute error (MAE), and the energy
-score / CRPS (lower = better distributional fit).
+We grade each predicted distribution four ways: \textbf{coverage} (does the 90\%
+interval actually hold 90\% of the points? closer to $0.90$ is better), \textbf{width}
+(narrower = sharper), median absolute error (\textbf{MAE}), and \textbf{CRPS} (overall
+fit, lower better).
 
-Our primary model is the \textbf{LSTM + StoNet head}; Table~\ref{tab:stonet} is its
-full sweep, and Table~\ref{tab:preadd} the pre-additive head for comparison.
+Our main model is the \textbf{LSTM + StoNet head} (Table~\ref{tab:stonet}), with the
+pre-additive head next to it for comparison (Table~\ref{tab:preadd}).
 
 \begin{table}[h]
   \centering
@@ -328,8 +328,9 @@ on the training energy loss.
 
 \section{Out-of-Sample Performance}
 
-We measure each test point's distance from training in the LSTM embedding space
-($k$NN and Mahalanobis), then stratify coverage by it.
+We measure how far each test point sits from the training data (in the LSTM's
+embedding space, by $k$NN and Mahalanobis), then check whether coverage holds up as that
+distance grows.
 
 \medskip
 \noindent
@@ -375,5 +376,187 @@ We measure each test point's distance from training in the LSTM embedding space
 \textbf{Caveat.} The paper split is in-distribution, so a flat curve is expected and
 is \emph{not} evidence of extrapolation. An out-of-support split (high-CCN tail
 \texttt{ccn\_tail}, or a shifted \texttt{event}) is the real test; not yet run.
+
+\section{Train/Test Distribution Shift}
+
+The paper split is \emph{supposed} to be in-distribution --- let's check. One catch
+first: adjacent hours are $\sim$99.7\% identical, so the $57{,}646$ train / $3{,}220$
+test rows are really only a few hundred \emph{independent} episodes. So we thin to every
+24th row ($2{,}402$ train / $135$ test) and describe each trajectory with 132 summary
+numbers. Wildfire is a similar slice of each side ($11.1\%$ train vs $12.7\%$ test), so
+the split doesn't lopside the treatment balance.
+
+Three complementary tests ask three different questions.
+
+\textbf{(1) Classifier two-sample test (C2ST) --- are they different, and how?}
+A classifier trained to tell train-period from test-period trajectories reaches
+\textbf{AUC $=0.79\pm0.02$} (linear probe $0.73$), well above the $0.5$ coin-flip line,
+so the periods are clearly distinguishable. The drift is dominated by
+\textbf{carbon monoxide} --- a combustion tracer --- then pressure and
+marine/aerosol-source channels (Figure~\ref{fig:shift_c2st}).
+
+\textbf{(2) MMD permutation test --- is it statistically real?}
+The maximum-mean-discrepancy statistic sits $\sim$7 standard deviations beyond its
+label-shuffled null: \textbf{$p=0.0008$} (the floor for $5000$ permutations), matched
+by an independent energy-distance test ($p=0.001$; Figure~\ref{fig:shift_dist}a). The
+shift is significant. (With enough independent episodes \emph{any} nonzero difference
+becomes significant, so a small $p$ means the shift is \emph{real}, not \emph{large}.)
+
+\textbf{(3) kNN overlap --- does the test still sit inside training territory?}
+Median nearest-neighbour distances are nearly equal (train$\to$train $8.01$ vs
+test$\to$train $8.36$, ratio $1.04$), and only $7.4\%$ of test episodes fall beyond the
+training 95th percentile (Figure~\ref{fig:shift_dist}b). Despite the significant shift,
+test episodes overwhelmingly land \emph{inside} the training support.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.48\textwidth}\centering
+    \includegraphics[width=\textwidth]{distribution_shift_testing/mmd_null.png}\\[-0.2em]
+    {\small (a) MMD null vs.\ observed}
+  \end{minipage}\hfill
+  \begin{minipage}{0.48\textwidth}\centering
+    \includegraphics[width=\textwidth]{distribution_shift_testing/knn_overlap.png}\\[-0.2em]
+    {\small (b) kNN train--test overlap}
+  \end{minipage}
+  \caption{(a) Observed MMD$^2$ (red) lies far right of the label-shuffled null (grey):
+  the shift is significant. (b) Distance to the nearest training episode; test (red) and
+  train (green) overlap heavily, only a thin tail past the training 95th percentile.}
+  \label{fig:shift_dist}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.78\textwidth]{distribution_shift_testing/c2st_feature_importance.png}
+  \caption{C2ST permutation importance: which channels the classifier used to separate
+  train from test. CO summaries dominate the drift.}
+  \label{fig:shift_c2st}
+\end{figure}
+
+\begin{table}[H]
+  \centering
+  \caption{Distribution-shift verdict. The test-period weather is genuinely and
+  significantly different (a CO / air-mass-source drift), but the difference is modest
+  and stays within the training support --- so overlap holds.}
+  \label{tab:shift}
+  \begin{tabular}{lll}
+    \toprule
+    Test & Question & Answer \\
+    \midrule
+    C2ST & Are train and test different?       & Yes --- AUC $0.79$; driven by CO \\
+    MMD  & Is that difference significant?     & Yes --- $p=0.0008$, $\sim$7$\sigma$ \\
+    kNN  & Does test stay in training support? & Mostly --- ratio $1.04$, $7.4\%$ past p95 \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Why this matters.} Since the test still sits \emph{inside} the training data,
+the effect measured where both models have support --- the ATT at wildfire weather
+(Section~\ref{sec:causal}) --- is on solid ground. An ATE/ATC would instead drag a model
+into the thin regions the shift opens up. That's the concrete reason we lead with the ATT.
+
+\section{Variable Structure and Correlations}
+
+For context, Figure~\ref{fig:scatter} scatters every variable against every other (one
+point per sample, the trajectory mean), and Figure~\ref{fig:corr} boils that down to
+correlations --- Pearson (linear) next to Spearman (rank). The takeaway: \textbf{no
+single variable drives CCN}. The strongest is solar radiation (\texttt{SWGDN}, $+0.33$),
+then cloud water, low cloud, and wind speed (all $\approx-0.25$) --- more particles on
+sunny, calm, low-cloud days. Pearson and Spearman look almost identical, so these
+one-to-one relationships are nearly straight-line; the real nonlinearity is in how the
+variables combine. And \texttt{CO}, the variable that most separates train from test,
+barely correlates with CCN on its own --- it marks \emph{when} smoky air shows up, not
+how much CCN there is.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.66\textwidth]{distribution_shift_testing/pairwise_scatter_small.png}
+  \caption{Pairwise scatter matrix of all 22 channels $+$ \texttt{log10(CCN)}
+  (bottom-right), 6000 samples, per-sample trajectory means. Bottom row / right column =
+  each variable vs.\ the outcome. Downscaled; full-resolution version available separately.}
+  \label{fig:scatter}
+\end{figure}
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{distribution_shift_testing/correlation_heatmap.png}
+  \caption{Correlation of all 23 variables over $20{,}000$ samples (per-sample means).
+  Left = Pearson (linear), right = Spearman (rank). Their near-identity indicates the
+  marginal relationships are close to monotone-linear.}
+  \label{fig:corr}
+\end{figure}
+
+\section{Distributional Calibration Across the Sweep (PIT)}
+
+Coverage (Section~\ref{sec:insample}) is one calibration check; PIT is the sharper one.
+For each point, the PIT is the fraction of the model's predicted samples that fall below
+the true CCN. If the model's distribution is right these come out uniform, so the
+histogram should be \textbf{flat} --- a \textbf{U-shape} means the intervals are too
+narrow (overconfident), a dome means too wide. Across all 48 configs
+(Figure~\ref{fig:pit}), most are mildly U-shaped: the models are a touch overconfident
+(the same under-dispersion from Section~\ref{sec:insample}), but none are badly off and
+the best ones are nearly flat.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\textwidth]{pit_grid_48.png}
+  \caption{PIT histograms for all 48 sweep configurations (architecture $\times$
+  hyper-parameters), each titled by its config. Flat $=$ calibrated; U-shape $=$
+  overconfident; dome $=$ underconfident.}
+  \label{fig:pit}
+\end{figure}
+
+\section{Causal Findings: The Wildfire Effect (T-learner)}
+\label{sec:causal}
+
+Now the actual science: does wildfire smoke reaching ENA change CCN? We use a
+\textbf{T-learner} --- train one model on wildfire trajectories, another on
+wildfire-free ones --- then run \emph{both} on the same held-out wildfire-period
+weather. The wildfire model gives the real ``with wildfire'' CCN; the clean model gives
+the counterfactual ``what it would have been without.'' The gap between them is the
+wildfire effect --- an \textbf{ATT} (effect on the treated).
+
+\textbf{Result.} Wildfire \textbf{raises CCN by roughly 15--20\%} during wildfire periods
+($\approx +40$ particles cm$^{-3}$); the whole distribution shifts up with a fatter high
+tail, so extreme-CCN episodes become more common. The finding holds across three
+stochastic-generator variants (Figure~\ref{fig:money}), each estimating between $+10\%$
+and $+24\%$.
+
+\begin{figure}[H]
+  \centering
+  \begin{minipage}{0.32\textwidth}\centering
+    \includegraphics[width=\linewidth]{t_learner_effect/recurrent/money_plot.png}\\ {\small recurrent: $+16\%$}
+  \end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\centering
+    \includegraphics[width=\linewidth]{t_learner_effect/per_timestep/money_plot.png}\\ {\small per-timestep: $+10\%$}
+  \end{minipage}\hfill
+  \begin{minipage}{0.32\textwidth}\centering
+    \includegraphics[width=\linewidth]{t_learner_effect/global_latent/money_plot.png}\\ {\small global-latent: $+24\%$}
+  \end{minipage}
+  \caption{CCN during wildfire periods (red, wildfire model) vs.\ what it would have been
+  without wildfire (green, clean model), both evaluated at the same held-out
+  wildfire-period weather. Every generator shifts the distribution up (dashed $=$ means)
+  with a fatter high tail. Horizontal axis is a log scale.}
+  \label{fig:money}
+\end{figure}
+
+The three generators all make the LSTM output a \emph{distribution} by injecting Gaussian
+noise; they differ in where it enters:
+\begin{itemize}
+  \item \textbf{Per-timestep:} a noise vector concatenated to the weather inputs, redrawn
+  fresh and independent at every timestep.
+  \item \textbf{Global-latent:} the same, except the noise vector is drawn once per
+  trajectory and held fixed across all timesteps (one shared latent code).
+  \item \textbf{Recurrent:} unlike the other two, the noise is \emph{added} to the LSTM's
+  hidden state (not concatenated to the inputs) at each step, so it accumulates through
+  the sequence.
+\end{itemize}
+
+\textbf{A few caveats.} This is the effect during \emph{real} wildfire periods, and it
+assumes the weather variables capture everything that differs between wildfire and clean
+air (ignorability). We don't have formal error bars yet --- the spread is $+10\%$ to
+$+24\%$ across generators. But because it's an \textbf{ATT measured where both models
+have data} (overlap holds, per the shift section), it stands on firmer ground than an
+ATE/ATC that would force the data-poor wildfire model to extrapolate.
+
 
 \end{document}

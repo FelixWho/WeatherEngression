@@ -1,0 +1,23 @@
+{
+  "params": {
+    "device": "cuda",
+    "split": "paper",
+    "seed": 2026,
+    "decorrelate_stride": 24,
+    "n_perm": 5000,
+    "out_dir": "reports/distribution_shift_testing"
+  },
+  "n_train_episodes": 2402,
+  "n_test_episodes": 135,
+  "n_features": 132,
+  "n_permutations": 5000,
+  "rbf_gamma_median_heuristic": 0.004292587283998728,
+  "mmd2_observed": 0.007161200046539307,
+  "mmd2_pvalue": 0.0007998400319936012,
+  "mmd2_null_mean": -2.2664344214717858e-05,
+  "mmd2_null_std": 0.001042255200445652,
+  "mmd2_zscore": 6.89261531829834,
+  "energy_observed": 0.15355873107910156,
+  "energy_pvalue": 0.0009998000399920016,
+  "energy_zscore": 6.869729042053223
+}

@@ -1,0 +1,40 @@
+{
+  "checkpoint_dir": "/storage3/fs1/myu/Active/felixhu/weather_checkpoints/runs/real_data_diagnostics/ena_weather/log10_ccn/paper/t_learner/BB_criterion1_global_latent_2251496",
+  "n_samples": 400,
+  "arms": {
+    "wildfire": {
+      "n_test": 408,
+      "crps": 0.12984606623649597,
+      "coverage_90": 0.8921568627450981,
+      "coverage_50": 0.3627450980392157,
+      "mean_width_90": 0.6127713321324655
+    },
+    "clean": {
+      "n_test": 2812,
+      "crps": 0.11993399262428284,
+      "coverage_90": 0.930298719772404,
+      "coverage_50": 0.566145092460882,
+      "mean_width_90": 0.8020554117169519
+    }
+  },
+  "effects": {
+    "ATT": {
+      "n_periods": 408,
+      "mean_log_effect": 0.09455383569002151,
+      "ratio": 1.2432367394823505,
+      "mean_raw_ccn_effect": 37.567474365234375
+    },
+    "ATC": {
+      "n_periods": 2812,
+      "mean_log_effect": 0.12026041746139526,
+      "ratio": 1.3190474463235942,
+      "mean_raw_ccn_effect": 35.24443054199219
+    },
+    "ATE": {
+      "n_periods": 3220,
+      "mean_log_effect": 0.11711994558572769,
+      "ratio": 1.3095435492365795,
+      "mean_raw_ccn_effect": 35.62034606933594
+    }
+  }
+}
