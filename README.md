@@ -1,4 +1,6 @@
-# WeatherEngression
+# WeatherEngression, Wildfire Conditional Average Treatment Effect on Cloud-Forming Particles
+
+Felix Hu, supervised by Prof. Maxine Yu
 
 WeatherEngression is a research sandbox for applying **engression** to weather-like time-series forecasting. The project connects two papers in `resources/`:
 
