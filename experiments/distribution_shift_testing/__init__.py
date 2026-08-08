@@ -1,15 +1,11 @@
-"""Train-vs-test covariate distribution-shift tests for the ENA back-trajectories.
+"""Checks on whether the test-period weather looks like what we trained on.
 
-Two tests, both run on per-channel summary statistics of each (241, 22)
-back-trajectory (see ``features.summarize_trajectories``):
+Two tests, both working off the per-channel summaries in ``features``:
 
-* ``c2st``: classifier two-sample test, "are train and test different?" Reports
-  held-out MLP/linear AUC plus permutation importance for which channels drifted.
-  The verdict is an effect size, not a p-value.
-* ``knn_overlap``: "does test still have train support?" Compares test->train
-  nearest-neighbor distances against a within-train baseline. This is the
-  extrapolation check behind trusting ATT over ATC/ATE.
+* ``c2st`` asks whether train and test are even distinguishable, and if so which
+  channels give it away. Reports an AUC rather than a p-value.
+* ``knn_overlap`` asks the harder question: are test points somewhere the training
+  data covers, or is the model extrapolating? This is what ATT leans on.
 
-Both share the same split, features, and decorrelation subsample. Entry point is
-``experiments.distribution_shift_testing.run``.
+Run them together with ``run.py``; ``run_mmd.py`` adds the formal test.
 """

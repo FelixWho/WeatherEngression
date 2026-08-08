@@ -1,18 +1,14 @@
-"""Pairwise scatter matrix (SPLOM) of every variable in the ENA dataset.
+"""Scatter matrix of every ENA variable against every other.
 
-Each sample is a (241, 22) back-trajectory; we summarize each channel by its
-per-sample trajectory MEAN, giving one scalar per sample per variable. Together
-with the target log10(CCN) that is 23 variables, and we draw a scatter for every
-pair (diagonal = the variable's own histogram + name). Output is a single-page PDF.
+Each channel is collapsed to its per-sample trajectory mean, so with the target that
+is 23 variables and one point per sample. Diagonal panels hold the variable's own
+histogram. Output is a single-page PDF.
 
-Points are rasterized (small file) while axes/text stay vector (crisp when zoomed).
+Points are rasterized to keep the file manageable; axes and text stay vector so they
+survive zooming.
 
-Shell use
----------
-```bash
-python -m experiments.pairwise_scatter --max-samples 6000 \
-    --out reports/pairwise_scatter/pairwise_scatter.pdf
-```
+    python -m experiments.pairwise_scatter --max-samples 6000 \
+        --out reports/pairwise_scatter/pairwise_scatter.pdf
 """
 
 from __future__ import annotations
@@ -70,10 +66,10 @@ def build_scatter_matrix(values: np.ndarray, names: list[str], out_path: Path,
 
     fig.suptitle("", y=1.0)
     out_path.parent.mkdir(parents=True, exist_ok=True)
-    # Render the ENTIRE figure as ONE raster (PNG), then wrap it into a one-page PDF
-    # with Pillow. Saving PDF directly invokes matplotlib's mixed-mode renderer, which
-    # rasterizes each of the k*k scatter artists separately and OOMs at high dpi even
-    # with 96G. A single PNG buffer is bounded (~(panel*k*dpi)^2 * 4 bytes) and safe.
+    # Render the whole figure to one PNG, then wrap that into a single-page PDF.
+    # Saving straight to PDF goes through matplotlib's mixed-mode renderer, which
+    # rasterizes each of the k*k scatter artists on its own and blew past 96G at high
+    # dpi. One PNG buffer stays bounded.
     from PIL import Image, ImageFile
     Image.MAX_IMAGE_PIXELS = None           # our own render, not an untrusted upload
     ImageFile.LOAD_TRUNCATED_IMAGES = True   # allow full decode of the large PNG
@@ -113,10 +109,9 @@ def main() -> None:
 
     n, T, d = ds.x.shape
     if args.per_timestep:
-        # Every (sample, timestep) becomes its own point: pool all timesteps of the
-        # selected samples. The target log10(CCN) is per-sample (no time axis), so we
-        # broadcast each sample's value across its T timesteps -> CCN panels show each
-        # trajectory as a horizontal band at its outcome level.
+        # Pool every timestep of every selected sample. CCN has no time axis, so it
+        # gets broadcast along the trajectory, which is why the CCN panels show each
+        # trajectory as a horizontal band.
         chan = ds.x.reshape(n * T, d)                     # (n*T, 22)
         y_col = np.repeat(ds.y, T).reshape(-1, 1)         # (n*T, 1), broadcast CCN
         values = np.concatenate([chan, y_col], axis=1)    # (n*T, 23)

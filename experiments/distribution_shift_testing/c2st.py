@@ -1,16 +1,13 @@
-"""Classifier two-sample test (C2ST) for train-vs-test covariate shift.
+"""Classifier two-sample test for train-vs-test covariate shift.
 
-Label every TRAIN summary vector 0 and every TEST summary vector 1, then train a
-classifier to tell them apart on a held-out split. The verdict is the held-out
-**AUC**:
+Label train vectors 0 and test vectors 1, fit a classifier, read the held-out AUC:
 
-    AUC ~ 0.5  ->  the two covariate distributions are indistinguishable (no shift)
-    AUC  > 0.5  ->  shift; permutation importance says WHICH channels/stats drifted
+    ~0.5   indistinguishable, no shift
+    >0.5   they differ, and permutation importance says which channels gave it away
 
-We report AUC (a prevalence-independent effect size) rather than a p-value. After
-decorrelation only ~10^2 independent episodes remain, so a p-value here would be
-meaningless. The MLP runs alongside a linear (logistic) probe: a wide gap between
-the two flags *nonlinear* shift.
+AUC rather than a p-value, since after decorrelation we are down to a couple hundred
+independent episodes and a p-value at that size would not mean much. The MLP runs
+next to a plain logistic probe, and a wide gap between them points at nonlinear shift.
 """
 
 from __future__ import annotations

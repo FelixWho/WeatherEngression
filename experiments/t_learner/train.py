@@ -1,30 +1,24 @@
-"""T-learner base: read the ENA dataset and fit the wildfire / wildfire-free arms.
+"""T-learner base: load the ENA data and fit the wildfire and wildfire-free arms.
 
-Stripped-down counterpart to ``real_data_diagnostic.py``, with no OOS diagnostics,
-metrics, charts, or prints. Just ``load -> split -> partition by wildfire ->
-fit two models``: one engressor on the wildfire (treatment) samples and one on the
-wildfire-FREE (control) samples, returned alongside the dataset and split indices.
+A stripped-down ``real_data_diagnostic.py`` with none of the OOS diagnostics, metrics,
+or charts. It loads, splits, partitions by wildfire flag, and fits two engressors,
+handing them back with the dataset and the split indices.
 
-Programmatic use
-----------------
-```python
-from experiments.t_learner.train import load_and_fit
+    from experiments.t_learner.train import load_and_fit
 
-(eng_wildfire, eng_no_wildfire, dataset,
- train_idx, test_idx) = load_and_fit(
-    target="ccn", log_ccn=True, split="paper", epochs=40,
-    wildfire_flag="BB_criterion1",                   # treatment definition
-    fit_overrides={"recurrent_state_noise": True},   # pick a head variant
-)
-```
+    (eng_wildfire, eng_no_wildfire, dataset,
+     train_idx, test_idx) = load_and_fit(
+        target="ccn", log_ccn=True, split="paper", epochs=40,
+        wildfire_flag="BB_criterion1",                   # treatment definition
+        fit_overrides={"recurrent_state_noise": True},   # pick a head variant
+    )
 
-Shell use (prints per-epoch energy-loss; add --save-checkpoint-dir to persist)
------------------------------------------------------------------------------
-```bash
-python -m experiments.t_learner.train --target ccn --log-ccn --recurrent-state-noise \
-  --epochs 40 --lr 0.003 --hidden-dim 192 --num-layer 5 --device cuda \
-  --save-checkpoint-dir runs/scratch/my_fit
-```
+From the shell it prints per-epoch energy loss. Pass --save-checkpoint-dir to keep the
+fitted models around.
+
+    python -m experiments.t_learner.train --target ccn --log-ccn --recurrent-state-noise \
+      --epochs 40 --lr 0.003 --hidden-dim 192 --num-layer 5 --device cuda \
+      --save-checkpoint-dir runs/scratch/my_fit
 """
 
 from __future__ import annotations

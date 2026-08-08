@@ -1,16 +1,9 @@
-"""Run both train-vs-test distribution-shift tests and write results + charts.
+"""Runs C2ST and the kNN overlap check end to end, then writes the JSON and charts.
 
-Pipeline:  load split -> summarize trajectories -> decorrelate -> standardize
-           -> C2ST (MLP + linear AUC, permutation importance)
-           -> kNN overlap (test->train vs train->train nearest-neighbor distance)
-           -> JSON + two charts
+load split -> summarize -> decorrelate -> standardize -> C2ST -> kNN -> results
 
-Shell use
----------
-```bash
-python -m experiments.distribution_shift_testing.run \
-    --device cuda --decorrelate-stride 24 --out-dir reports/distribution_shift_testing
-```
+    python -m experiments.distribution_shift_testing.run \
+        --device cuda --decorrelate-stride 24 --out-dir reports/distribution_shift_testing
 """
 
 from __future__ import annotations
@@ -96,7 +89,7 @@ def main() -> None:
     for k, v in sorted(vars(args).items()):
         print(f"  {k} = {v}", flush=True)
 
-    # ---- load + summarize + decorrelate ----------------------------------------
+    # load + summarize + decorrelate
     dataset, train_idx, test_idx = load_split(split=args.split, seed=args.seed)
     print(f"\nfull split: train={len(train_idx)} test={len(test_idx)} rows", flush=True)
 
@@ -112,7 +105,7 @@ def main() -> None:
     print(f"summary features: {feats_train_z.shape[1]} "
           f"({len(dataset.feature_names)} channels x 6 stats)", flush=True)
 
-    # ---- C2ST ------------------------------------------------------------------
+    # C2ST
     print("\n=== C2ST (classifier two-sample test) ===", flush=True)
     c2st = run_c2st(
         feats_train_z, feats_test_z, names,
@@ -124,7 +117,7 @@ def main() -> None:
     for row in c2st["importance_table"][:12]:
         print(f"  {row['feature']:28s} {row['auc_drop']:+.4f}", flush=True)
 
-    # ---- kNN overlap -----------------------------------------------------------
+    # kNN overlap
     print("\n=== kNN overlap (test->train vs train->train) ===", flush=True)
     knn = run_knn_overlap(
         feats_train_z, feats_test_z, reference_size=args.reference_size, seed=args.seed
@@ -134,7 +127,7 @@ def main() -> None:
     print(f"test beyond train p95: {knn['frac_test_beyond_train_p95']*100:.1f}%   "
           f"beyond p99: {knn['frac_test_beyond_train_p99']*100:.1f}%", flush=True)
 
-    # ---- charts + JSON ---------------------------------------------------------
+    # charts + JSON
     _plot_importance(c2st["importance_table"], out_dir / "c2st_feature_importance.png")
     _plot_knn(knn, out_dir / "knn_overlap.png")
 

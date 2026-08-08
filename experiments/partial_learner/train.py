@@ -1,7 +1,7 @@
-"""Partial-learner training: a CLEAN arm and an ALL-DATA arm.
+"""Partial-learner training: a clean arm and an all-data arm.
 
-Same as ``experiments.t_learner.train`` except the second model is fit on ALL
-training data (clean + wildfire) rather than wildfire-only:
+Same as ``experiments.t_learner.train``, except the second model sees all the
+training data instead of the wildfire rows only:
 
   - ``clean`` arm : trained on the wildfire-free samples (identical to the
     T-learner's clean arm).

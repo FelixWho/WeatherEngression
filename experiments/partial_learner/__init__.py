@@ -1,9 +1,8 @@
-"""Partial-learner: a clean-data arm vs an ALL-DATA arm.
+"""Partial-learner: a clean arm against an all-data arm.
 
-Sibling of ``experiments.t_learner``. The ONLY difference is the second model:
-here it is trained on ALL data (clean + wildfire) instead of wildfire-only. The
-clean arm is identical to the T-learner's clean arm, so the two approaches can be
-compared directly.
+Sibling of ``experiments.t_learner``, differing in one place: the second model is fit
+on everything (clean + wildfire) rather than on wildfire alone. The clean arm is the
+same either way, so the two approaches line up for comparison.
 
 Import from the specific module:
 

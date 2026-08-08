@@ -1,12 +1,11 @@
 """Load the ENA split and turn each back-trajectory into a summary feature vector.
 
-Each sample is a (241, 22) back-trajectory, far too high-dimensional to feed a
-two-sample test directly, and the timesteps are heavily autocorrelated besides. We
-collapse each trajectory to a fixed set of per-channel summary statistics so the
-shift tests work on interpretable, moderate-sized vectors.
+A (241, 22) trajectory is too big to hand a two-sample test directly, and its
+timesteps are nearly redundant anyway, so we keep a few per-channel summary stats
+instead.
 
-Both the C2ST and the kNN overlap test call these helpers, so they always see the
-same features, split, and decorrelation subsample.
+C2ST and kNN overlap both go through here, which is what keeps them on the same
+features and the same subsample.
 """
 
 from __future__ import annotations
@@ -69,7 +68,7 @@ def load_split(
 ):
     """Load the dataset and the train/test split indices.
 
-    Uses the SAME loader call and split seed convention as the t-learner
+    Uses the same loader call and split seed convention as the t-learner
     (``seed`` for the data, ``seed + 17`` for the split) so "train" and "test"
     here are byte-for-byte the same rows the models were trained/evaluated on.
     """
@@ -107,7 +106,7 @@ def decorrelate(idx: np.ndarray, stride: int) -> np.ndarray:
 
 
 def standardize_by_train(train: np.ndarray, test: np.ndarray):
-    """Z-score both arrays using TRAIN column moments (test never leaks in)."""
+    """Z-score both arrays using train column moments, so test never leaks in."""
     mean = train.mean(axis=0, keepdims=True)
     std = train.std(axis=0, keepdims=True)
     std[std == 0.0] = 1.0

@@ -1,15 +1,10 @@
-"""Run the MMD permutation test on the same decorrelated episodes as C2ST/kNN.
+"""MMD permutation test, run on the same decorrelated episodes as C2ST and kNN.
 
-Pipeline:  load split -> summarize trajectories -> decorrelate -> standardize
-           -> MMD^2 permutation test (+ energy-distance cross-check)
-           -> JSON + null-distribution chart.
+Same front half as ``run.py`` (load, summarize, decorrelate, standardize), then the
+permutation test and the null-distribution chart.
 
-Shell use
----------
-```bash
-python -m experiments.distribution_shift_testing.run_mmd \
-    --device cuda --decorrelate-stride 24 --n-perm 5000
-```
+    python -m experiments.distribution_shift_testing.run_mmd \
+        --device cuda --decorrelate-stride 24 --n-perm 5000
 """
 
 from __future__ import annotations

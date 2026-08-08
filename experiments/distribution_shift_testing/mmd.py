@@ -1,25 +1,21 @@
-"""MMD permutation test for train-vs-test covariate shift (the formal two-sample test).
+"""MMD permutation test: is the train/test difference statistically real?
 
-Where C2ST reports an AUC and kNN reports distances (both effect sizes), this gives
-an actual hypothesis test:
+C2ST and kNN both give effect sizes. This one gives a p-value, for
+H0: train and test summary vectors come from the same distribution.
 
-    H0 : train and test summary vectors are drawn from the same distribution.
+The statistic is the unbiased squared MMD with a Gaussian kernel, bandwidth set once
+by the median heuristic. For the null we pool everything, re-split at random into the
+original group sizes a few thousand times, and see where the observed value lands.
+A characteristic kernel means MMD is zero only when the two distributions match, so
+this picks up differences in spread and shape, not just in means.
 
-The statistic is the (unbiased) squared Maximum Mean Discrepancy with a Gaussian
-kernel; the bandwidth is fixed once by the median heuristic. The p-value comes from
-a **label permutation** null: pool all points, repeatedly re-split them at random
-into groups of the original sizes, and recompute MMD^2 to trace out its null
-distribution. Because the Gaussian kernel is characteristic, MMD = 0 iff the two
-distributions are identical, so this catches shift of *any* kind, not just in means.
+Energy distance comes along as a cross-check, since it is the same statistic with a
+different kernel and reuses the permutation machinery.
 
-Energy distance (Szekely-Rizzo) is computed alongside as a free cross-check: it is
-MMD with the distance-induced kernel, so it reuses the same permutation machinery.
+The caveat that matters: the permutation null assumes independent samples, so run this
+on the stride-subsampled episodes. On raw hourly rows the p-value is garbage.
 
-Validity note: the permutation null assumes exchangeable (independent) samples, so
-run this on the DECORRELATED episodes (stride-subsampled), never the raw
-autocorrelated hourly rows. Otherwise the p-value comes out meaninglessly small.
-
-All heavy linear algebra (n x n kernel matrix, P vectorized permutations) runs on GPU.
+The n x n kernel matrix and the permutations run on GPU.
 """
 
 from __future__ import annotations

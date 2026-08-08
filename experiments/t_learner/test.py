@@ -1,17 +1,14 @@
 """Estimate the wildfire effect on CCN from the two trained T-learner arms.
 
-Reloads the two trained arms, picks the covariates to evaluate at, samples both,
-and contrasts the resulting CCN distributions.
+Reload both arms, pick the covariates to evaluate at, sample from each, and contrast
+the two CCN distributions. The wildfire arm gives "with wildfire" and the clean arm
+gives the counterfactual. Evaluating at ``test_wildfire_idx`` is the ATT; swap in the
+clean or the full covariate set for ATC or ATE.
 
-Idea (distributional ATT): at the wildfire-period covariates, sample the wildfire
-arm ("with wildfire") and the clean arm ("counterfactual no-wildfire"), then
-contrast the two CCN distributions. Evaluate at ``test_wildfire_idx`` -> ATT;
-swap in all/clean covariates for ATE/ATC.
-
-Run:
     python -m experiments.t_learner.test \
         --checkpoint-dir /storage3/.../t_learner/BB_criterion1_recurrent
-(Split params default to train.py's, so a run trained with defaults reloads as-is.)
+
+Split params default to train.py's, so a run trained with defaults reloads as-is.
 """
 
 from __future__ import annotations
@@ -53,11 +50,11 @@ def load_saved(
     device: str | None = None,
 ):
     """Reload the two arm models AND the pickled dataset / arm indices that
-    ``train.load_and_fit(save_checkpoint_dir=...)`` wrote, WITHOUT retraining.
+    ``train.load_and_fit(save_checkpoint_dir=...)`` wrote, without retraining.
 
-    Returns the SAME 7-tuple as ``load_and_fit``. The dataset and the four arm
+    Returns the same 7-tuple as ``load_and_fit``. The dataset and the four arm
     index arrays are read straight from the ``dataset/`` pickles under the
-    checkpoint dir, so they are the EXACT arrays training used. No split
+    checkpoint dir, so they are exactly the arrays training used. No split
     reconstruction, no seed/param matching to get wrong.
     """
     ckpt_dir = _resolve_save_dir(save_checkpoint_dir)   # same storage3 resolution as saving
@@ -171,14 +168,14 @@ def arm_calibration(engressor: LSTMEngressor, x: np.ndarray, y: np.ndarray,
 
 
 # --------------------------------------------------------------------------- #
-# Effect estimands: run BOTH arms at the SAME covariates, then difference.
+# Effect estimands: run both arms at the same covariates, then difference.
 #   average over wildfire x -> ATT ; clean x -> ATC ; all x -> ATE
 # --------------------------------------------------------------------------- #
 def estimand(eng_wildfire: LSTMEngressor, eng_no_wildfire: LSTMEngressor,
              x: np.ndarray, n_samples: int = 400) -> dict:
     """Treatment effect at covariates ``x``: effect(x) = wildfire(x) - clean(x).
 
-    Both arms are sampled at the SAME x (that's what makes it causal, not a
+    Both arms are sampled at the same x (that's what makes it causal, not a
     smoky-vs-clean comparison). Returns the mean effect in log10(CCN), the
     multiplicative ratio 10**mean, the raw-CCN mean difference, and the pooled
     factual / counterfactual sample sets (for the money plot).
