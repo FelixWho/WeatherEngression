@@ -4,10 +4,10 @@ Each sample is summarized by its per-channel trajectory MEAN (one scalar per sam
 per variable), matching the mean-mode scatter matrix; the target is appended as a
 23rd variable. We then show two correlation matrices side by side:
 
-* Pearson  -- linear correlation.
-* Spearman -- rank correlation (captures any monotonic relationship, incl. the
-              nonlinear ones visible in the scatter matrix). Computed as Pearson on
-              column ranks, so no SciPy dependency.
+* Pearson: linear correlation.
+* Spearman: rank correlation, which picks up any monotonic relationship including
+  the curved ones visible in the scatter matrix. Computed as Pearson on column
+  ranks, so there is no SciPy dependency.
 
 Cells are annotated and colored on a diverging scale (-1 red .. 0 white .. +1 blue).
 

@@ -1,7 +1,7 @@
 """Monotone building blocks for the pre-additive (engression-paper) head.
 
-These implement a strictly increasing, twice-differentiable ``g`` -- the map the
-pre-ANM extrapolation theory (Assumption A3) needs. Used only by the
+These implement a strictly increasing, twice-differentiable ``g``, the map that
+the pre-ANM extrapolation theory (Assumption A3) needs. Used only by the
 pre-additive generator head; nothing else depends on them.
 """
 

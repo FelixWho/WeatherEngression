@@ -1,7 +1,7 @@
 """T-learner base: read the ENA dataset and fit the wildfire / wildfire-free arms.
 
-Stripped-down counterpart to ``real_data_diagnostic.py`` -- no OOS diagnostics,
-no metrics, no charts, no prints. Just ``load -> split -> partition by wildfire ->
+Stripped-down counterpart to ``real_data_diagnostic.py``, with no OOS diagnostics,
+metrics, charts, or prints. Just ``load -> split -> partition by wildfire ->
 fit two models``: one engressor on the wildfire (treatment) samples and one on the
 wildfire-FREE (control) samples, returned alongside the dataset and split indices.
 
@@ -159,7 +159,7 @@ def load_and_fit(
     """Read the dataset, build the training split, and fit the model.
 
     Returns ``(engressor, dataset, train_idx, test_idx)``. ``fit_overrides`` is
-    merged into the fit kwargs last -- use it to select a head variant (e.g.
+    merged into the fit kwargs last, so use it to select a head variant (e.g.
     ``{"recurrent_state_noise": True}``) or override any training knob. Training is
     VERBOSE by default (per-epoch energy-loss / CRPS goes to stdout); pass
     ``silent=True`` to swallow it.
@@ -167,8 +167,8 @@ def load_and_fit(
 
     # Load + split + partition into the wildfire (treatment) and wildfire-FREE
     # (control) arms. The control excludes BOTH BB criteria (union), so a strong
-    # event missed by the relaxed criterion (crit2>0 but crit1==0) -- or a NaN-flag
-    # period that binarizes to False -- does NOT leak into the "clean" arm; points
+    # event missed by the relaxed criterion (crit2>0 but crit1==0), or a NaN-flag
+    # period that binarizes to False, does NOT leak into the "clean" arm. Points
     # flagged only by the other criterion fall in neither arm (a deliberate buffer).
     (
         dataset,

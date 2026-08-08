@@ -303,7 +303,7 @@ def select_real_split(
     - ``paper``: the source paper's held-out months (Jan, Mar, May, Jul, Sep,
       and Nov 2022) are the test pool; all other months are the train pool.
     - ``event``: hold out a meteorological event (``event_flag``) as the test set,
-      train on the remaining clean periods -- a real distribution-shift stress test
+      train on the remaining clean periods, a real distribution-shift stress test
       analogous to the synthetic out-of-support splits.
     - ``ccn_tail``: train on the lower CCN range (below the ``ccn_tail_quantile``
       quantile) and test on the held-out high-CCN tail. Because the target never
@@ -404,8 +404,8 @@ def select_real_split(
 # construction (including the one-step-ahead, leakage-free column targets),
 # time and event-flag fields, and the split regimes' invariants. It also
 # re-reads a few raw cells straight from the .mat and asserts the stored
-# ``(X, y)`` match a from-scratch recomputation -- an end-to-end correctness
-# check, not just a smoke test.
+# ``(X, y)`` match a from-scratch recomputation. That makes it an end-to-end
+# correctness check, not just a smoke test.
 # ---------------------------------------------------------------------------
 
 

@@ -1,7 +1,7 @@
 """Estimate the wildfire effect on CCN from the two trained T-learner arms.
 
-SKELETON -- the plumbing (reload the arms, pick the covariates, sample both) is
-wired up; the actual estimation is left as TODO stubs to fill in.
+Reloads the two trained arms, picks the covariates to evaluate at, samples both,
+and contrasts the resulting CCN distributions.
 
 Idea (distributional ATT): at the wildfire-period covariates, sample the wildfire
 arm ("with wildfire") and the clean arm ("counterfactual no-wildfire"), then
@@ -53,11 +53,11 @@ def load_saved(
     device: str | None = None,
 ):
     """Reload the two arm models AND the pickled dataset / arm indices that
-    ``train.load_and_fit(save_checkpoint_dir=...)`` wrote -- WITHOUT retraining.
+    ``train.load_and_fit(save_checkpoint_dir=...)`` wrote, WITHOUT retraining.
 
     Returns the SAME 7-tuple as ``load_and_fit``. The dataset and the four arm
     index arrays are read straight from the ``dataset/`` pickles under the
-    checkpoint dir, so they are the EXACT arrays training used -- no split
+    checkpoint dir, so they are the EXACT arrays training used. No split
     reconstruction, no seed/param matching to get wrong.
     """
     ckpt_dir = _resolve_save_dir(save_checkpoint_dir)   # same storage3 resolution as saving
@@ -74,7 +74,7 @@ def load_saved(
     if not (ds_dir / "dataset_obj.pkl").exists():
         raise FileNotFoundError(
             f"no pickled dataset under {ds_dir}. This run predates the pickle dump "
-            "in train.py -- retrain with the current train.py, or reconstruct the "
+            "in train.py. Retrain with the current train.py, or reconstruct the "
             "split from the seed instead."
         )
 
@@ -95,7 +95,7 @@ def load_saved(
 
 
 # --------------------------------------------------------------------------- #
-# Sampling helpers (working -- reuse these in the estimation below).
+# Sampling helpers, reused by the estimation below.
 # --------------------------------------------------------------------------- #
 def sample_conditional(engressor: LSTMEngressor, x: torch.Tensor, n_samples: int = 400) -> np.ndarray:
     """Draw ``n_samples`` from an arm's conditional CCN distribution at each row of x.
@@ -110,8 +110,8 @@ def sample_conditional(engressor: LSTMEngressor, x: torch.Tensor, n_samples: int
 def counterfactual_pair(eng_wildfire: LSTMEngressor, eng_no_wildfire: LSTMEngressor, x: torch.Tensor, n_samples: int = 400):
     """At covariates ``x``, sample both arms.
 
-    Returns ``(with_wildfire, counterfactual_clean)``, each ``(n, n_samples)`` --
-    the factual "with wildfire" draws and the counterfactual "no wildfire" draws.
+    Returns ``(with_wildfire, counterfactual_clean)``, each ``(n, n_samples)``: the
+    factual "with wildfire" draws and the counterfactual "no wildfire" draws.
     This is the raw material for every effect below.
     """
     with_wildfire = sample_conditional(eng_wildfire, x, n_samples)

@@ -6,7 +6,7 @@ only the checkpoint names, the pickled index names, and the money-plot labels
 differ.
 
 The effect here is ``all(x) - clean(x)``. Because the all-data arm is a blend of
-the wildfire and clean conditionals, this is a KNOWN-attenuated estimate -- run
+the wildfire and clean conditionals, this is a KNOWN-attenuated estimate. Run it
 alongside the T-learner to see how much smaller it comes out.
 
 Run:
@@ -39,7 +39,7 @@ if str(REPO_ROOT) not in sys.path:
 from data_generation.ena_weather import ENADataset  # noqa: F401 (needed to unpickle dataset_obj.pkl)
 from engression_modifications.lstm import load_lstm_engressor_checkpoint
 from experiments.t_learner.train import _resolve_save_dir
-# Reuse the generic analysis helpers -- they take (engressor, x, y) and don't care
+# Reuse the generic analysis helpers; they take (engressor, x, y) and don't care
 # which arm they're pointed at.
 from experiments.t_learner.test import (
     arm_calibration,

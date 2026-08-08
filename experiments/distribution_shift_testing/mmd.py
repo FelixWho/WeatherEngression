@@ -10,14 +10,14 @@ kernel; the bandwidth is fixed once by the median heuristic. The p-value comes f
 a **label permutation** null: pool all points, repeatedly re-split them at random
 into groups of the original sizes, and recompute MMD^2 to trace out its null
 distribution. Because the Gaussian kernel is characteristic, MMD = 0 iff the two
-distributions are identical -- so this detects shift of *any* kind, not just in means.
+distributions are identical, so this catches shift of *any* kind, not just in means.
 
 Energy distance (Szekely-Rizzo) is computed alongside as a free cross-check: it is
 MMD with the distance-induced kernel, so it reuses the same permutation machinery.
 
 Validity note: the permutation null assumes exchangeable (independent) samples, so
-this must be run on the DECORRELATED episodes (stride-subsampled), never the raw
-autocorrelated hourly rows -- otherwise the p-value is meaninglessly small.
+run this on the DECORRELATED episodes (stride-subsampled), never the raw
+autocorrelated hourly rows. Otherwise the p-value comes out meaninglessly small.
 
 All heavy linear algebra (n x n kernel matrix, P vectorized permutations) runs on GPU.
 """

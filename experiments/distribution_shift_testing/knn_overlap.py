@@ -1,16 +1,16 @@
 """kNN overlap test: does the TEST covariate region still have TRAIN support?
 
-C2ST answers "are train and test different?"; this answers the complementary and,
-for the downstream causal estimands, more consequential question: "do test points
-sit in regions the training data actually covers, or must the model extrapolate?"
+C2ST asks whether train and test differ. This asks the complementary question, and
+for the causal estimands it is the more consequential one: do test points sit where
+the training data actually covers, or does the model have to extrapolate?
 
-For every test summary vector we take its Euclidean distance to the nearest TRAIN
-vector, and compare that distribution against the train's own nearest-neighbor
-distances (a within-train baseline). If test distances are systematically larger,
-the test set lives partly outside the training support -- exactly the extrapolation
-risk that makes ATC/ATE less trustworthy than ATT.
+For every test summary vector we take the Euclidean distance to its nearest TRAIN
+vector, then compare that distribution against the train set's own nearest-neighbor
+distances. If test distances run systematically larger, part of the test set falls
+outside the training support. That is the extrapolation risk that makes ATC/ATE less
+trustworthy than ATT.
 
-Reuses the vetted numpy kNN helpers in ``experiments.oos``.
+Uses the numpy kNN helpers already in ``experiments.oos``.
 """
 
 from __future__ import annotations

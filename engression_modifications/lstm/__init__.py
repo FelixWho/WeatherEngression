@@ -5,14 +5,14 @@ reaches the stochastic MLP. This subpackage keeps the energy-loss idea, but
 replaces the flat generator with an LSTM encoder followed by a stochastic head.
 
 The pieces are split by concern:
-  - ``config``       -- ``LSTMEngressionConfig`` (all knobs)
-  - ``monotone``     -- ``PositiveLinear`` / ``MonotonePositiveMLP`` (pre-additive g)
-  - ``lstm_backbone`` -- the shared ``DeterministicLSTMEncoder`` building block
-  - ``generators``   -- one generator class per head + ``build_lstm_model`` (the model)
-  - ``engressor``    -- ``LSTMEngressor`` (the fitted wrapper, separate from the model)
+  - ``config``       : ``LSTMEngressionConfig`` (all knobs)
+  - ``monotone``     : ``PositiveLinear`` / ``MonotonePositiveMLP`` (pre-additive g)
+  - ``lstm_backbone``: the shared ``DeterministicLSTMEncoder`` building block
+  - ``generators``   : one generator class per head + ``build_lstm_model`` (the model)
+  - ``engressor``    : ``LSTMEngressor`` (the fitted wrapper, separate from the model)
   - ``preprocessing``-- input validation + standardization
-  - ``checkpoint``   -- save/reload
-  - ``training``     -- ``fit_lstm_engression`` (the training loop)
+  - ``checkpoint``   : save/reload
+  - ``training``     : ``fit_lstm_engression`` (the training loop)
 
 Import the public names straight from this package:
 ``from engression_modifications.lstm import LSTMEngressionConfig, fit_lstm_engression``.

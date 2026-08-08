@@ -2,8 +2,8 @@
 
 Each generator maps one trajectory + a noise draw to one sample of the target.
 They all reuse the same encoder building block (``lstm_backbone.py``) and differ ONLY
-in how the head turns h(X) + noise into a sample -- so each head is its own
-class, not a branch inside one model. The ``build_lstm_model`` factory at the
+in how the head turns h(X) + noise into a sample, so each head is its own
+class rather than a branch inside one model. The ``build_lstm_model`` factory at the
 bottom is the single place that picks a class from the config flags.
 
 Noise-in-the-HEAD variants (share one deterministic encoder):
@@ -89,9 +89,9 @@ class StochasticAppendingLSTMGenerator(LSTMGenerator):
         self.head = _mlp_head(encoder.output_dim, out_dim, config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, S, F) ; eps: (B, 1, F) -- one fresh noise timestep per sample
+        # x: (B, S, F) ; eps: (B, 1, F), one fresh noise timestep per sample
         eps = torch.randn(x.shape[0], 1, x.shape[2], device=x.device, dtype=x.dtype)
-        x_aug = torch.cat([x, eps], dim=1)          # (B, S+1, F), out-of-place -- x untouched
+        x_aug = torch.cat([x, eps], dim=1)          # (B, S+1, F), out-of-place so x stays untouched
         return self.head(self.encode(x_aug))        # encode -> (B, H) -> head -> (B, out_dim)
 
 
@@ -110,7 +110,7 @@ class StochasticAdditiveLSTMGenerator(LSTMGenerator):
         self.head = _mlp_head(encoder.output_dim, out_dim, config)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # x: (B, S, F) ; eps: (B, F) -- fresh noise on the final timestep only
+        # x: (B, S, F) ; eps: (B, F), fresh noise on the final timestep only
         eps = torch.randn(x.shape[0], x.shape[2], device=x.device, dtype=x.dtype)
         noise = torch.zeros_like(x)                 # (B, S, F), a private scratch tensor
         noise[:, -1, :] = eps                       # only the last timestep is noised
@@ -120,7 +120,7 @@ class StochasticAdditiveLSTMGenerator(LSTMGenerator):
 
 
 class PerTimestepNoiseLSTMGenerator(LSTMGenerator):
-    """#1 -- concat FRESH noise to every timestep (the StoNet analogue for sequences).
+    """#1: concat FRESH noise to every timestep (the StoNet analogue for sequences).
 
     A ``(B, S, k)`` noise block is concatenated to the features at every step, so
     the LSTM reads ``(B, S, F+k)``. Many injection points make this the most
@@ -152,11 +152,11 @@ class PerTimestepNoiseLSTMGenerator(LSTMGenerator):
 
 
 class GlobalLatentLSTMGenerator(LSTMGenerator):
-    """#2 -- one latent ``z`` per sample, broadcast to EVERY timestep.
+    """#2: one latent ``z`` per sample, broadcast to EVERY timestep.
 
     Draw ``z ~ N(0, I_k)`` once per sequence and concat the SAME ``z`` onto every
     frame, so the LSTM reads ``(B, S, F+k)``. Because ``z`` is re-presented at
-    every step it cannot be forgotten -- the clean conditional-generator (CVAE)
+    every step it cannot be forgotten. This is the clean conditional-generator (CVAE)
     form. Deterministic MLP head; ``encode`` uses ``z = 0``.
     """
 
@@ -183,7 +183,7 @@ class GlobalLatentLSTMGenerator(LSTMGenerator):
 
 
 class StochasticInitStateLSTMGenerator(LSTMGenerator):
-    """#3 -- seed the LSTM's initial hidden/cell state from noise.
+    """#3: seed the LSTM's initial hidden/cell state from noise.
 
     ``z ~ N(0, I_k)`` is mapped to ``(h0, c0)``; the input sequence is unchanged.
     Truly recurrence-level and elegant, but a SINGLE injection at t=0 that a long
@@ -221,13 +221,13 @@ class StochasticInitStateLSTMGenerator(LSTMGenerator):
 
 
 class RecurrentStateNoiseLSTMGenerator(nn.Module):
-    """#4 -- inject fresh noise into the hidden state at EVERY timestep.
+    """#4: inject fresh noise into the hidden state at EVERY timestep.
 
     A hand-rolled single-layer recurrence (``nn.LSTMCell``): after each step the
     hidden state is perturbed, ``h_t <- h_t + softplus(scale) * eps_t`` with fresh
     ``eps_t`` per step, so randomness ACCUMULATES through time (a stochastic-RNN /
     VRNN flavor). Highest ceiling, most expensive (Python loop over timesteps +
-    BPTT). Single layer only -- ``lstm_num_layers`` is ignored here. ``encode``
+    BPTT). Single layer only, so ``lstm_num_layers`` is ignored here. ``encode``
     runs the same loop with the noise scale forced off.
 
     Not an ``LSTMGenerator`` subclass: the recurrence uses a cell, not the shared
@@ -291,8 +291,8 @@ class StoNetHeadGenerator(LSTMGenerator):
 
     Plain ReLU MLP, but fresh Gaussian noise is mixed in at the INPUT and at
     EVERY hidden layer. Injecting noise repeatedly gives the network many
-    independent chances to turn randomness into output spread -- empirically the
-    strongest guard against collapsing to a point predictor. No monotonicity is
+    independent chances to turn randomness into output spread, and in practice it is
+    the strongest guard against collapsing to a point predictor. No monotonicity is
     imposed, so it carries none of the engression-paper extrapolation theory.
     """
 
@@ -363,7 +363,7 @@ def build_lstm_model(
     When ``config.model`` is None a shared ``DeterministicLSTMEncoder`` is built and
     wrapped in the generator class selected by the config flags (StoNet /
     pre-additive / default). This factory is the ONLY place that maps flags to a
-    class -- the generators themselves never branch on the config.
+    class; the generators themselves never branch on the config.
     """
 
     custom = config.model

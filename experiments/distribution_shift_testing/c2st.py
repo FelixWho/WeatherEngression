@@ -7,10 +7,10 @@ classifier to tell them apart on a held-out split. The verdict is the held-out
     AUC ~ 0.5  ->  the two covariate distributions are indistinguishable (no shift)
     AUC  > 0.5  ->  shift; permutation importance says WHICH channels/stats drifted
 
-We report AUC (a prevalence-independent effect size), not a p-value, because after
-decorrelation there are only ~10^2 independent episodes -- any p-value would be
-meaningless. A linear (logistic) probe is reported alongside the MLP so a large
-MLP-minus-linear gap flags *nonlinear* shift.
+We report AUC (a prevalence-independent effect size) rather than a p-value. After
+decorrelation only ~10^2 independent episodes remain, so a p-value here would be
+meaningless. The MLP runs alongside a linear (logistic) probe: a wide gap between
+the two flags *nonlinear* shift.
 """
 
 from __future__ import annotations

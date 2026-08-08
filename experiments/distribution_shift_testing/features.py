@@ -1,12 +1,12 @@
 """Load the ENA split and turn each back-trajectory into a summary feature vector.
 
-The raw covariate is a (241, 22) back-trajectory per sample -- too high-dimensional
-(and too autocorrelated across timesteps) to feed a two-sample test directly. We
+Each sample is a (241, 22) back-trajectory, far too high-dimensional to feed a
+two-sample test directly, and the timesteps are heavily autocorrelated besides. We
 collapse each trajectory to a fixed set of per-channel summary statistics so the
-distribution-shift tests operate on interpretable, moderate-dimensional vectors.
+shift tests work on interpretable, moderate-sized vectors.
 
-Every helper here is shared by both the C2ST and the kNN overlap test so they see
-exactly the same features, split, and (optional) decorrelation subsample.
+Both the C2ST and the kNN overlap test call these helpers, so they always see the
+same features, split, and decorrelation subsample.
 """
 
 from __future__ import annotations

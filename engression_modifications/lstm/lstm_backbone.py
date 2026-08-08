@@ -1,8 +1,8 @@
 """The shared LSTM backbone.
 
 The backbone reads one trajectory ``x`` of shape ``(B, S, F)`` and returns its
-summary ``h(X)`` of shape ``(B, H)`` -- the fixed-size vector every generator
-head conditions on. It lives here in one place and is composed into each
+summary ``h(X)`` of shape ``(B, H)``, the fixed-size vector every generator head
+conditions on. It lives here in one place and is composed into each
 generator (see ``generators.py``).
 
 Dimension key used throughout: B = batch, S = seq_len, F = input_dim (features
@@ -19,8 +19,8 @@ class DeterministicLSTMEncoder(nn.Module):
     """Read a trajectory and return its summary vector h(X).
 
     ``nn.LSTM`` walks the ``(seq_len, n_features)`` sequence step by step; we keep
-    only the final hidden state of the last layer -- a fixed-size summary of the
-    whole history. ``output_dim`` is the width of that summary, which the heads
+    only the final hidden state of the last layer, which summarizes the whole
+    history at fixed size. ``output_dim`` is the width of that summary, which the heads
     use to size their input.
     """
 

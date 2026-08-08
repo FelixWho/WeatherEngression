@@ -23,9 +23,9 @@ class LSTMEngressionConfig:
     # Custom generator override. When set, this REPLACES the built-in head
     # selection below, so you can plug in any architecture that implements
     # ``nn.Module``. Two forms are accepted:
-    #   - an ``nn.Module`` instance -- used as-is (you are responsible for its
+    #   - an ``nn.Module`` instance, used as-is (you are responsible for its
     #     input/output dims matching the data);
-    #   - a factory ``callable(input_dim, out_dim, config) -> nn.Module`` -- called
+    #   - a factory ``callable(input_dim, out_dim, config) -> nn.Module``, called
     #     at fit time so the module can size itself to the data.
     # Leave as None to use the built-in default / StoNet / pre-additive heads
     # chosen by the flags below. Not serialized into checkpoints; pass the same
@@ -38,7 +38,7 @@ class LSTMEngressionConfig:
     monotone_hidden_dim: int | None = None
     monotone_num_layer: int = 2
     # Loose mode: feed h(X) into the package's own StoNet (noise at input + every
-    # layer, unconstrained -- monotonicity hoped, not forced). The ergonomic match
+    # layer, unconstrained, so monotonicity is hoped for rather than forced). The match
     # to the upstream engression model, but sequence-native.
     stonet_head: bool = False
     noise_all_layer: bool = True
@@ -71,7 +71,7 @@ class LSTMEngressionConfig:
     # Early stopping on the TRAINING energy loss: stop if the mean epoch loss has
     # not improved by more than ``early_stop_min_delta`` for ``early_stop_patience``
     # epochs. None disables it. NOTE: this monitors training loss, which rewards
-    # sharpness -- it saves compute but does not by itself fix under-dispersion; a
+    # sharpness. It saves compute but does not by itself fix under-dispersion; a
     # validation-based criterion is the proper calibration guard (future work).
     early_stop_patience: int | None = None
     early_stop_min_delta: float = 1e-4
