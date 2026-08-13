@@ -95,3 +95,6 @@ runs/**
 
 # SLURM run logs (regenerable job output)
 slurm/**/*.log
+
+# Private resources
+resources/NSF_CAIG_grant.pdf
