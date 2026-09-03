@@ -1,0 +1,62 @@
+Run parameters:
+  additive_noise = False
+  appending_noise = False
+  batch_size = 128
+  ccn_tail_quantile = 0.8
+  checkpoint = True
+  checkpoint_every = 10
+  device = mps
+  early_stop_patience = 12
+  engression_model = lstm
+  epochs = 100
+  event_flag = dust
+  global_latent_noise = True
+  hidden_dim = 128
+  index_dim = None
+  log_ccn = True
+  lr = 0.003
+  mat_path = data_generation/weather_data.mat
+  max_coverage_90 = 0.99
+  max_samples = None
+  min_coverage_90 = 0.6
+  no_oos = True
+  no_plot = False
+  no_readme = False
+  noise_dim = 64
+  num_layer = 3
+  oos_batch_size = 512
+  oos_bins = 10
+  oos_reference_size = 2000
+  out_dir = runs/real_data_diagnostics/ena_weather/log10_ccn/paper/epsilon_dim_ablation/global_latent_eps64
+  per_timestep_noise = False
+  pre_additive = False
+  prediction_samples = 400
+  recurrent_state_noise = False
+  resblock = False
+  seed = 2026
+  seq_stride = 1
+  show = False
+  skip_assertions = True
+  split = paper
+  stochastic_init_noise = False
+  stonet_head = False
+  target = ccn
+  test_size = None
+  train_size = None
+  verbose = True
+  weight_decay = 0.0
+[epoch    1/100] energy-loss 0.4934 | fit 0.9834 | spread 0.4900
+[epoch   10/100] energy-loss 0.4378 | fit 0.9280 | spread 0.4902
+[epoch   20/100] energy-loss 0.4379 | fit 0.9192 | spread 0.4813
+[epoch   30/100] energy-loss 0.4415 | fit 0.9233 | spread 0.4818
+[epoch   40/100] energy-loss 0.4376 | fit 0.9356 | spread 0.4980
+[epoch 44] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+Real-data engression [lstm]: ENA log10(CCN) / paper
+  usable samples loaded: 60866  sequence shape: (241, 22)
+  train rows: 57646   test rows: 3220
+  energy score (CRPS): 0.1261
+  median abs error:    0.1777
+  90% coverage: 0.907  (width 0.737)
+  50% coverage: 0.480  (width 0.289)
+  PIT shape:    well-dispersed  (mean 0.519/0.5, var 0.082/0.083, KS 0.041)
+  wrote run to: runs/real_data_diagnostics/ena_weather/log10_ccn/paper/epsilon_dim_ablation/global_latent_eps64

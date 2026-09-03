@@ -39,12 +39,10 @@ if str(REPO_ROOT) not in sys.path:
 
 from data_generation.ena_weather import (
     DEFAULT_MAT_PATH,
-    load_ena_supervised_dataset,
     parse_count_or_all,
-    select_real_split,
 )
 from engression_modifications import get_engression_model
-from experiments.pipeline import set_reproducible_seeds
+from experiments.wildfire_arms import load_wildfire_arms
 
 # All checkpoints go to storage3 (the /home quota is tiny). A relative
 # save_checkpoint_dir is resolved UNDER this root, mirroring the runs/ tree; an
@@ -69,59 +67,6 @@ _LSTM_HEAD_FLAGS = (
     "stochastic_init_noise",
     "recurrent_state_noise",
 )
-
-
-def _load_dataset_and_arms(
-    *,
-    mat_path: str,
-    target: str,
-    log_ccn: bool,
-    split: str,
-    seq_stride: int,
-    max_samples: int | None,
-    train_size: int | None,
-    test_size: int | None,
-    seed: int,
-    wildfire_flag: str,
-):
-    """Load the dataset, build the split, and partition each split into the
-    wildfire (treatment) and wildfire-free (control) arms.
-
-    Shared by ``load_and_fit`` (to train) and ``load_saved`` (to reload) so the arm
-    indices always match a given set of split params. See ``load_and_fit`` for the
-    control-arm definition (excludes both BB criteria).
-    """
-    set_reproducible_seeds(seed)
-    dataset = load_ena_supervised_dataset(
-        mat_path=mat_path,
-        target=target,
-        max_samples=max_samples,
-        seq_stride=seq_stride,
-        seed=seed,
-        log_ccn=log_ccn,
-    )
-    train_idx, test_idx = select_real_split(
-        dataset=dataset,
-        split=split,
-        train_size=train_size,
-        test_size=test_size,
-        seed=seed + 17,
-    )
-    if wildfire_flag not in dataset.flags:
-        raise KeyError(
-            f"unknown wildfire flag {wildfire_flag!r}; available: {sorted(dataset.flags)}"
-        )
-    treated_idx = np.flatnonzero(dataset.flags[wildfire_flag])
-    clean_idx = np.flatnonzero(
-        ~(dataset.flags["BB_criterion1"] | dataset.flags["BB_criterion2"])
-    )
-    return (
-        dataset,
-        np.intersect1d(train_idx, treated_idx),
-        np.intersect1d(train_idx, clean_idx),
-        np.intersect1d(test_idx, treated_idx),
-        np.intersect1d(test_idx, clean_idx),
-    )
 
 
 def load_and_fit(
@@ -164,13 +109,7 @@ def load_and_fit(
     # event missed by the relaxed criterion (crit2>0 but crit1==0), or a NaN-flag
     # period that binarizes to False, does NOT leak into the "clean" arm. Points
     # flagged only by the other criterion fall in neither arm (a deliberate buffer).
-    (
-        dataset,
-        train_wildfire_idx,
-        train_no_wildfire_idx,
-        test_wildfire_idx,
-        test_no_wildfire_idx,
-    ) = _load_dataset_and_arms(
+    dataset, arms = load_wildfire_arms(
         mat_path=mat_path,
         target=target,
         log_ccn=log_ccn,
@@ -182,6 +121,10 @@ def load_and_fit(
         seed=seed,
         wildfire_flag=wildfire_flag,
     )
+    train_wildfire_idx = arms.train_wildfire
+    train_no_wildfire_idx = arms.train_clean
+    test_wildfire_idx = arms.test_wildfire
+    test_no_wildfire_idx = arms.test_clean
 
     model_spec = get_engression_model(engression_model)
     is_lstm = model_spec.name == "lstm"

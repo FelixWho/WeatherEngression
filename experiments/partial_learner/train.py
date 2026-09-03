@@ -40,9 +40,9 @@ from engression_modifications import get_engression_model
 from experiments.t_learner.train import (
     DEFAULT_CKPT_ROOT,  # noqa: F401 (re-exported for parity)
     _LSTM_HEAD_FLAGS,
-    _load_dataset_and_arms,
     _resolve_save_dir,
 )
+from experiments.wildfire_arms import load_wildfire_arms
 
 
 def load_and_fit(
@@ -80,13 +80,7 @@ def load_and_fit(
     # Same split/partition as the T-learner. train_clean_idx is the wildfire-free
     # set; train_all_idx is clean + wildfire together (the tiny crit2-only buffer
     # is excluded, matching how the arms are defined).
-    (
-        dataset,
-        train_wildfire_idx,
-        train_no_wildfire_idx,
-        test_wildfire_idx,
-        test_no_wildfire_idx,
-    ) = _load_dataset_and_arms(
+    dataset, arms = load_wildfire_arms(
         mat_path=mat_path,
         target=target,
         log_ccn=log_ccn,
@@ -98,6 +92,10 @@ def load_and_fit(
         seed=seed,
         wildfire_flag=wildfire_flag,
     )
+    train_wildfire_idx = arms.train_wildfire
+    train_no_wildfire_idx = arms.train_clean
+    test_wildfire_idx = arms.test_wildfire
+    test_no_wildfire_idx = arms.test_clean
     if wildfire_oversample < 1:
         raise ValueError("wildfire_oversample must be >= 1")
     train_clean_idx = train_no_wildfire_idx

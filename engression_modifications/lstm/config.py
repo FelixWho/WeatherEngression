@@ -75,3 +75,23 @@ class LSTMEngressionConfig:
     # validation-based criterion is the proper calibration guard (future work).
     early_stop_patience: int | None = None
     early_stop_min_delta: float = 1e-4
+
+    def __post_init__(self) -> None:
+        """Reject incompatible built-in generator selections."""
+
+        architecture_flags = {
+            "pre_additive": self.pre_additive,
+            "stonet_head": self.stonet_head,
+            "appending_noise": self.appending_noise,
+            "additive_noise": self.additive_noise,
+            "per_timestep_noise": self.per_timestep_noise,
+            "global_latent_noise": self.global_latent_noise,
+            "stochastic_init_noise": self.stochastic_init_noise,
+            "recurrent_state_noise": self.recurrent_state_noise,
+        }
+        enabled = [name for name, value in architecture_flags.items() if value]
+        if len(enabled) > 1:
+            raise ValueError(
+                "select at most one built-in model architecture; "
+                f"got {', '.join(enabled)}"
+            )

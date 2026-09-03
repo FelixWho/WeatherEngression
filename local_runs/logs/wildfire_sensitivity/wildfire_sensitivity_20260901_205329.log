@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "/Users/shubeini/src/WeatherEngression/experiments/wildfire_sensitivity/main.py", line 10, in <module>
+    from data_generation.ena_weather import slugify
+ModuleNotFoundError: No module named 'data_generation'

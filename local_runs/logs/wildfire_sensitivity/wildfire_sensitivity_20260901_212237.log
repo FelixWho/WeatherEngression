@@ -1,0 +1,64 @@
+Wildfire-sensitivity counterfactual screening
+  device: mps
+  training batch size: 64
+  clean training rows: 51214  wildfire evaluation rows: 6786
+  predictive samples per interval: 400
+
+[1/12] candidate: PBLH^(1/5)
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)']
+  train X: (51214, 241, 10)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.6744 | fit 21.2647 | spread 9.5903
+[epoch   10/100] energy-loss 11.0062 | fit 20.1529 | spread 9.1467
+[epoch 16] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+Traceback (most recent call last):
+  File "<frozen runpy>", line 203, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "/Users/shubeini/src/WeatherEngression/experiments/wildfire_sensitivity/main.py", line 226, in <module>
+    main()
+    ~~~~^^
+  File "/Users/shubeini/src/WeatherEngression/experiments/wildfire_sensitivity/main.py", line 216, in main
+    sensitive = is_sensitive(model, wildfire_x, wildfire_y)
+  File "/Users/shubeini/src/WeatherEngression/experiments/wildfire_sensitivity/main.py", line 116, in is_sensitive
+    samples = model.sample(
+              ~~~~~~~~~~~~^
+        torch.from_numpy(wildfire_x),
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+        sample_size=PREDICTION_SAMPLES,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ).cpu()
+    ^
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/utils/_contextlib.py", line 124, in decorate_context
+    return func(*args, **kwargs)
+  File "/Users/shubeini/src/WeatherEngression/engression_modifications/lstm/engressor.py", line 70, in sample
+    samples = [self._unstandardize_y(self.model(x)) for _ in range(sample_size)]
+                                     ~~~~~~~~~~^^^
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/shubeini/src/WeatherEngression/engression_modifications/lstm/generators.py", line 177, in forward
+    return self.head(self.encoder(torch.cat([x, z], dim=2)))   # LSTM reads (B, S, F+k)
+                     ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/shubeini/src/WeatherEngression/engression_modifications/lstm/lstm_backbone.py", line 51, in forward
+    _, (hidden, _) = self.lstm(x)
+                     ~~~~~~~~~^^^
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1778, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1789, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/shubeini/src/WeatherEngression/.venv/lib/python3.14/site-packages/torch/nn/modules/rnn.py", line 1164, in forward
+    result = _VF.lstm(
+        input,
+    ...<7 lines>...
+        self.batch_first,
+    )
+RuntimeError: MPS backend out of memory (MPS allocated: 7.51 GiB, other allocations: 11.70 GiB, max allowed: 20.13 GiB). Tried to allocate 1.17 GiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).

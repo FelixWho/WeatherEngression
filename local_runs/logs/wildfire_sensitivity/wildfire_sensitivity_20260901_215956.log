@@ -1,0 +1,295 @@
+Wildfire-sensitivity counterfactual screening
+  device: mps
+  training batch size: 64
+  evaluation batch size: 64
+  clean training rows: 51214  wildfire evaluation rows: 6786
+  predictive samples per interval: 400
+
+[1/12] candidate: PBLH^(1/5)
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)']
+  train X: (51214, 241, 10)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.6744 | fit 21.2647 | spread 9.5903
+[epoch   10/100] energy-loss 11.0062 | fit 20.1529 | spread 9.1467
+[epoch 16] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1453060/1635426 inside (88.8%)
+  classification: sensitive; kept out of the input set
+
+[2/12] candidate: CFLOW
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)']
+  train X: (51214, 241, 10)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.9919 | fit 21.3922 | spread 9.4003
+[epoch   10/100] energy-loss 11.0658 | fit 23.2111 | spread 12.1453
+[epoch 17] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1596725/1635426 inside (97.6%)
+  classification: insensitive; added to the input set
+
+[3/12] candidate: CFMID
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW']
+  train X: (51214, 241, 11)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.3145 | fit 20.8295 | spread 9.5150
+[epoch   10/100] energy-loss 10.6035 | fit 22.3577 | spread 11.7542
+[epoch 15] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1601215/1635426 inside (97.9%)
+  classification: insensitive; added to the input set
+
+[4/12] candidate: SWGDN
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID']
+  train X: (51214, 241, 12)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.0016 | fit 20.5636 | spread 9.5619
+[epoch   10/100] energy-loss 10.7246 | fit 19.0932 | spread 8.3686
+[epoch 16] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1445110/1635426 inside (88.4%)
+  classification: sensitive; kept out of the input set
+
+[5/12] candidate: LWP^(1/5)
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID']
+  train X: (51214, 241, 12)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.4734 | fit 21.4101 | spread 9.9367
+[epoch   10/100] energy-loss 10.8558 | fit 20.5163 | spread 9.6605
+[epoch 16] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1495099/1635426 inside (91.4%)
+  classification: sensitive; kept out of the input set
+
+[6/12] candidate: LTS
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID']
+  train X: (51214, 241, 12)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.1767 | fit 20.0362 | spread 8.8595
+[epoch   10/100] energy-loss 10.4740 | fit 21.4052 | spread 10.9312
+[epoch 15] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1591915/1635426 inside (97.3%)
+  classification: insensitive; added to the input set
+
+[7/12] candidate: OMEGA
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS']
+  train X: (51214, 241, 13)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.0256 | fit 19.6399 | spread 8.6143
+[epoch   10/100] energy-loss 10.2175 | fit 20.3959 | spread 10.1784
+[epoch 17] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1573639/1635426 inside (96.2%)
+  classification: insensitive; added to the input set
+
+[8/12] candidate: LWC^(1/5)
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS', 'OMEGA']
+  train X: (51214, 241, 14)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.6467 | fit 21.5694 | spread 9.9226
+[epoch   10/100] energy-loss 10.8273 | fit 22.5208 | spread 11.6936
+[epoch 19] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1592162/1635426 inside (97.4%)
+  classification: insensitive; added to the input set
+
+[9/12] candidate: RH
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS', 'OMEGA', 'LWC^(1/5)']
+  train X: (51214, 241, 15)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.4062 | fit 20.7305 | spread 9.3243
+[epoch   10/100] energy-loss 10.5217 | fit 20.9543 | spread 10.4325
+[epoch 17] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1590515/1635426 inside (97.3%)
+  classification: insensitive; added to the input set
+
+[10/12] candidate: T
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS', 'OMEGA', 'LWC^(1/5)', 'RH']
+  train X: (51214, 241, 16)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 7.6549 | fit 15.6889 | spread 8.0341
+[epoch   10/100] energy-loss 9.5024 | fit 17.6443 | spread 8.1419
+[epoch 14] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1582993/1635426 inside (96.8%)
+  classification: insensitive; added to the input set
+
+[11/12] candidate: CO^(1/5)
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS', 'OMEGA', 'LWC^(1/5)', 'RH', 'T']
+  train X: (51214, 241, 17)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 8.6204 | fit 16.2585 | spread 7.6381
+[epoch   10/100] energy-loss 8.7987 | fit 16.3859 | spread 7.5871
+[epoch 14] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1340434/1635426 inside (82.0%)
+  classification: sensitive; kept out of the input set
+
+[12/12] candidate: PREC^(1/5)
+  inputs: ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS', 'OMEGA', 'LWC^(1/5)', 'RH', 'T']
+  train X: (51214, 241, 17)  train y: (51214, 241)
+  training on clean trajectories...
+[epoch    1/100] energy-loss 11.6051 | fit 21.3532 | spread 9.7481
+[epoch   10/100] energy-loss 10.8663 | fit 22.6016 | spread 11.7354
+[epoch 16] early stop: training energy loss has not improved by >0.0001 for 12 epochs
+  evaluating 6786 wildfire trajectories...
+  drawing 400 samples in 107 batches of at most 64 trajectories...
+    sampled batch 1/107
+    sampled batch 10/107
+    sampled batch 20/107
+    sampled batch 30/107
+    sampled batch 40/107
+    sampled batch 50/107
+    sampled batch 60/107
+    sampled batch 70/107
+    sampled batch 80/107
+    sampled batch 90/107
+    sampled batch 100/107
+    sampled batch 107/107
+1537699/1635426 inside (94.0%)
+  classification: sensitive; kept out of the input set
+['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS', 'OMEGA', 'LWC^(1/5)', 'RH', 'T']

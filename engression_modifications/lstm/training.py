@@ -64,6 +64,14 @@ def fit_lstm_engression(
             optimizer.zero_grad()
             y_sample1 = model(x_batch)
             y_sample2 = model(x_batch)
+            # Population energy loss = E[ ||Y - g(X, eps)||_2^beta
+            #   - 0.5 * ||g(X, eps) - g(X, eps_prime)||_2^beta ],
+            # where the expectation is over training (X, Y) and independent
+            # noise draws eps and eps_prime.
+            # Two-sample estimate = mean over minibatch rows of:
+            #   0.5 * ||y - y_sample1||_2^beta
+            #   + 0.5 * ||y - y_sample2||_2^beta
+            #   - 0.5 * ||y_sample1 - y_sample2||_2^beta.
             loss = energy_loss_two_sample(
                 y_batch,
                 y_sample1,
@@ -78,6 +86,7 @@ def fit_lstm_engression(
             # Decompose the energy score for monitoring: fit pulls samples toward y,
             # spread rewards conditional variance. A collapsing spread term is the
             # signature of under-dispersion.
+            # no_grad saved computation and memory here.
             with torch.no_grad():
                 fit_term = 0.5 * (
                     (y_batch - y_sample1).norm(dim=1) + (y_batch - y_sample2).norm(dim=1)
@@ -92,6 +101,8 @@ def fit_lstm_engression(
         mean_fit = total_fit / rows
         mean_spread = total_spread / rows
         epoch = epoch_idx + 1
+
+        # Save model weight checkpoint
         checkpoint_due = (
             checkpoint_every is not None
             and config.checkpoint_path is not None
@@ -132,6 +143,8 @@ def fit_lstm_engression(
                     y_std=y_std,
                 ),
             )
+
+        # Log
         if epoch == 1 or epoch % log_every == 0 or epoch == config.num_epochs:
             print(
                 f"[epoch {epoch:>4}/{config.num_epochs}] "
@@ -139,6 +152,7 @@ def fit_lstm_engression(
                 flush=True,
             )
 
+        # Early stop
         if config.early_stop_patience is not None:
             if mean_loss < best_monitor_loss - config.early_stop_min_delta:
                 best_monitor_loss = mean_loss

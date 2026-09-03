@@ -55,6 +55,7 @@ pip-wheel-metadata/
 
 # Generated datasets and serialized arrays
 data/
+weather_data.mat
 *.npz
 *.npy
 *.parquet
@@ -92,6 +93,7 @@ runs/**
 !runs/**/
 !runs/**/README.md
 !runs/**/.gitkeep
+weather_checkpoints/
 
 # SLURM run logs (regenerable job output)
 slurm/**/*.log

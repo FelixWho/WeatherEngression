@@ -22,11 +22,14 @@ class PositiveLinear(nn.Module):
 
     def __init__(self, in_dim: int, out_dim: int, bias: bool = True) -> None:
         super().__init__()
-        # softplus(-2) ~ 0.13, so weights start small and positive.
+        # Trainable params
+        # weight: (out_dim, in_dim); bias: (out_dim,)
         self.weight_raw = nn.Parameter(torch.empty(out_dim, in_dim).normal_(-2.0, 0.1))
         self.bias = nn.Parameter(torch.zeros(out_dim)) if bias else None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # F.linear: X Weights^T + Bias
+        # (..., in_dim) -> (..., out_dim)
         return F.linear(x, F.softplus(self.weight_raw), self.bias)
 
 
@@ -40,14 +43,19 @@ class MonotonePositiveMLP(nn.Module):
     def __init__(self, in_dim: int, out_dim: int, hidden_dim: int, num_layer: int) -> None:
         super().__init__()
         num_layer = max(1, num_layer)
+        # in_dim -> hidden_dim -> ... -> out_dim
         dims = [in_dim] + [hidden_dim] * (num_layer - 1) + [out_dim]
         self.layers = nn.ModuleList(
             PositiveLinear(dims[i], dims[i + 1]) for i in range(num_layer)
         )
         self.act = nn.Softplus()
+        
+        # Skip helps when softplus generates small gradients
+        # and adding it on every forward() guarantees strict increase in the network
         self.skip = PositiveLinear(in_dim, out_dim, bias=False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # (..., in_dim) -> (..., out_dim)
         h = x
         for index, layer in enumerate(self.layers):
             h = layer(h)
