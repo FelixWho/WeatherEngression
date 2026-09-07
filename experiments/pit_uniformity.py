@@ -74,6 +74,7 @@ from engression_modifications.lstm import load_lstm_engressor_checkpoint
 from experiments.real_data_diagnostic import QUANTILE_LEVELS, predict_quantiles_and_samples
 from experiments.real_metrics import pit_values
 
+# Sweep the following parameters.
 # Same grid and ordering as slurm/pit_charts_stochastic_sweep_oos/run.slurm.
 VARIANTS = ("additive", "appending", "per_timestep", "global_latent", "init_state", "recurrent")
 LRS = ("0.003", "0.01")
@@ -351,7 +352,7 @@ def main() -> None:
         seed=args.seed,
         log_ccn=args.log_ccn,
     )
-    train_idx, test_idx = select_real_split(
+    _, test_idx = select_real_split(
         dataset=dataset,
         split=args.split,
         train_size=args.train_size,
@@ -362,7 +363,7 @@ def main() -> None:
     )
     x_test = torch.from_numpy(dataset.x[test_idx])
     y_test = dataset.y[test_idx].astype(np.float64)
-    times_hours = dataset.time[test_idx].astype(np.float64) * 24.0  # datenum (days) -> hours
+    times_hours = dataset.time[test_idx].astype(np.float64) * 24.0  # Matlab datenum (days) -> hours
     block_note = f"block-hours={args.block_hours:g}" if args.block_hours > 0 else "data-driven thinning (tau)"
     print(f"  test rows: {len(test_idx)}   robust null: {block_note}")
 

@@ -76,7 +76,7 @@ class LSTMEngressor:
         ]
         stacked = torch.stack(samples, dim=2)        # (batch_size, out_dim, sample_size)
         if sample_size == 1 and not expand_dim:
-            return stacked.squeeze(2)                # (batch_size, out_dim), for scalars like CCN count out_dim = 1
+            return stacked.squeeze(2)                # (batch_size, out_dim), for scalars like CCN count sample_size = 1
         return stacked
 
     @torch.no_grad()

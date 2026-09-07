@@ -240,6 +240,8 @@ def main(screening_mode: str) -> None:
             print("  training on clean trajectories...")
             model = train_counterfactual(train_x, train_y, c)
 
+            # TODO: check model calibration, does it do what we expect?
+
             # Evaluate c versus counterfactual distribution
             wildfire_train_x, wildfire_train_y = filter_dataset_columns(
                 dataset.x[arms.train_wildfire],

@@ -160,3 +160,19 @@ For a single sweep and sweep-until-stable along the sensitives, we get a final i
 ```
 
 The concern I have is whether the list itself is sensitive to the order in which we process sensisitive variables. Additionally, I need to write some code to ensure the counterfactual model is calibrated.
+
+## Unbiased/Adjusted Causal Inference
+
+Final models:
+
+1. Model 1:  M  →  M' (predicted)
+2. Model 2:  M + M' (predicted)  →  CCN
+3. Model 3:  M + observed wildfire-period M' + wildfire emissions  →  CCN
+
+Model 1 is our counterfactual model. Model's 2 and 3 predict what would happen with/without wildfire plumes.
+
+Steps:
+
+1. Model 1 is trained only on clean periods. During a wildfire period, feed it the observed robust variables. It generates the sensitive meteorology that would plausibly have occurred without wildfire: M'_0.
+2. Model 2 is also trained only on clean periods. Feed it the robust variables and generated M'_0. It generates the counterfactual no-wildfire CCN distribution: CCN_0.
+3. Model 3 is trained primarily on wildfire periods, with clean observations added for stability. It generates the factual wildfire-period CCN distribution: CCN_1, conditioned on robust variables, observed sensitive variables, and wildfire emissions.
