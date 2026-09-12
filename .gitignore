@@ -65,27 +65,27 @@ weather_data.mat
 
 # Generated figures and report build products
 figures/
-# ...including inside report subfolders (charts/PDFs are regenerable from slurm jobs)
-reports/**/*.png
-reports/**/*.pdf
-reports/**/*.aux
-reports/**/*.log
-reports/**/*.out
-reports/**/*.toc
-reports/**/*.synctex.gz
-reports/*.aux
-reports/*.bbl
-reports/*.bcf
-reports/*.blg
-reports/*.fdb_latexmk
-reports/*.fls
-reports/*.log
-reports/*.out
-reports/*.run.xml
-reports/*.synctex.gz
-reports/*.toc
-reports/*.pdf
-reports/*.png
+# Report artifacts are intentionally trackable.
+# reports/**/*.png
+# reports/**/*.pdf
+# reports/**/*.aux
+# reports/**/*.log
+# reports/**/*.out
+# reports/**/*.toc
+# reports/**/*.synctex.gz
+# reports/*.aux
+# reports/*.bbl
+# reports/*.bcf
+# reports/*.blg
+# reports/*.fdb_latexmk
+# reports/*.fls
+# reports/*.log
+# reports/*.out
+# reports/*.run.xml
+# reports/*.synctex.gz
+# reports/*.toc
+# reports/*.pdf
+# reports/*.png
 
 # Experiment run artifacts. Keep README scaffolding trackable.
 runs/**
