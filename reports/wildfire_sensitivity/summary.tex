@@ -1,0 +1,149 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.85in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+\setlength{\tabcolsep}{7pt}
+
+\begin{document}
+\begin{center}
+{\Large Wildfire sensitivity: working note}\\[4pt]
+Until-stable run 3086411 $\cdot$ 18 September 2026 $\cdot$ two rounds, about 83 minutes
+\end{center}
+
+\textbf{Current result.}
+The screening labels \textbf{LWP, LTS, and CO sensitive}, and leaves
+\textbf{OMEGA undetermined}. Eight tested variables enter the insensitive set:
+PBLH, CFLOW, CFMID, SWGDN, LWC, RH, T, and PREC. Together with the ten starting
+assumptions (P, LAND, SLP, WS, TS, DUST, EPV, CHL, DMS, SO2EM), that gives
+18 insensitive variables. The starting ten were not tested. These are screening
+labels, not established causal effects. We use only until-stable experiments for
+reported results.
+
+\textbf{What is fitted and held out?}
+For each candidate $c$, a global-latent LSTM engressor learns
+$c=f(M,\varepsilon)$ on clean trajectories, where $M$ is the current insensitive
+input set. Each trajectory contains 241 timesteps. We pool the original clean
+training and test rows, then form four separate sets:
+
+\begin{center}
+\begin{tabular}{lrl}
+\toprule
+Clean set & Trajectories & Purpose \\
+\midrule
+Training & 23,564 & Fit the network \\
+Validation & 3,110 & Early stopping; select best checkpoint \\
+Recalibration & 1,350 & Fit the quantile correction \\
+Control / test & 2,159 & Check corrected coverage \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The clean pool has 54,026 trajectories; the other 23,843 are unused after time-gap
+purging and month matching. Recalibration and control are separately month-matched
+to 6,786 wildfire trajectories. Splits use 30-day arrival-time blocks with history
+gaps at both boundaries. Wildfire outcomes are used only for evaluation.
+
+\textbf{What recalibration changes.}
+Kuleshov, Fenner, and Ermon~\cite{kuleshov2018} fit a monotone map from predicted
+CDF probabilities to observed frequencies, recommending isotonic regression.
+Our implementation uses a simpler empirical quantile map. On the recalibration
+rows, compute each observation's position $u_i=F_i(y_i)$ in the base model's
+predictive distribution, approximated by randomized ranks among 400 draws.
+Pool these positions across trajectories and timesteps, then use
+\[
+ p_q=\operatorname{Quantile}_q(\{u_i\}),
+ \qquad Q_{\mathrm{corrected},x}(q)=Q_{\mathrm{base},x}(p_q).
+\]
+The network is unchanged. One mapping per candidate adjusts all its quantile
+predictions. A central 90\% interval uses corrected 5th and 95th percentiles;
+a 95\% interval uses corrected 2.5th and 97.5th percentiles. The same mapping is
+applied to control and wildfire data. Fitting the correction does not guarantee
+that it achieves the target coverage on the separate control set.
+
+\textbf{Decision rule.}
+A model is accepted if its control coverage at both 90\% and 95\% lies within
+$\pm3$ estimated standard errors of nominal. Standard errors use 30-day blocks
+and the same observation weighting as pooled coverage. A failed check leaves
+$c$ undetermined and outside $M$. For accepted models, a control-minus-wildfire
+95\% coverage drop greater than two percentage points is sensitive; otherwise
+$c$ enters $M$. Sensitive and undetermined candidates are retried after $M$ grows.
+The run stops when a round adds nobody.
+
+\newpage
+\textbf{Latest assessment of each tested candidate.}
+Coverage is pooled across all 241 timesteps and reported in percent; drops are
+percentage points. The eight insensitive decisions were made in round 1 and
+retained. LWP, LTS, CO, and OMEGA were reassessed in round 2, which added nobody.
+All numbers below come from this one until-stable run.
+
+\begin{center}
+\small
+\begin{tabular}{lrrrrl}
+\toprule
+ & \multicolumn{2}{c}{Clean coverage} & Wildfire & & \\
+Candidate & 90\% interval & 95\% interval & 95\% interval & Drop & Decision \\
+\midrule
+LWP   & 89.4 & 94.5 & 92.1 & $+2.3$ & Sensitive \\
+LTS   & 88.1 & 94.2 & 91.3 & $+2.9$ & Sensitive \\
+CO    & 81.0 & 87.4 & 75.7 & $+11.7$ & Sensitive \\
+\midrule
+PBLH  & 89.2 & 94.6 & 93.2 & $+1.4$ & Insensitive \\
+CFLOW & 89.6 & 94.5 & 95.5 & $-1.0$ & Insensitive \\
+CFMID & 91.2 & 95.2 & 94.7 & $+0.5$ & Insensitive \\
+SWGDN & 88.7 & 94.3 & 94.6 & $-0.3$ & Insensitive \\
+LWC   & 90.5 & 95.1 & 95.1 & $\approx0.0$ & Insensitive \\
+RH    & 91.5 & 95.5 & 94.9 & $+0.6$ & Insensitive \\
+T     & 85.5 & 92.4 & 92.0 & $+0.4$ & Insensitive \\
+PREC  & 90.0 & 94.7 & 93.9 & $+0.9$ & Insensitive \\
+\midrule
+OMEGA & 92.7 & 96.5 & --- & --- & Undetermined \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\smallskip
+Drops were calculated before rounding, so subtracting the displayed coverages
+can differ by 0.1 point. Names omit the stored feature transforms: PBLH, LWP,
+LWC, CO, PREC, DUST, and SO2EM use fifth roots; CHL and DMS use square roots.
+
+\textbf{How much should we trust these labels?}
+CO has the largest coverage drop, but its nominal 95\% interval covers only
+87.4\% of clean control values. Its coverage varies enough between blocks that
+the acceptance band is 85.0--105.0\%; it passes despite missing the target by
+7.6 points. T similarly passes with 92.4\% coverage and a 90.9--99.1\% band.
+An upper band above 100\% is an unbounded normal approximation, not a possible
+coverage value. Passing means the test did not detect a departure, not that
+coverage is necessarily close enough for our purpose.
+
+OMEGA still overcovers: 92.7\% is outside its 88.3--91.7\% band, and 96.5\% is
+outside 94.0--96.0\%. LWP and LTS are closer to their clean-coverage targets,
+but their drops remain near the chosen two-point sensitivity threshold.
+
+The next questions are whether CO and T need a stricter practical coverage
+criterion, and whether the two-point drop is larger than clean-versus-clean
+sampling variation. Also, if a smoke-affected variable enters $M$, it can help
+predict another smoke-affected variable and hide that variable's shift.
+Until-stable iteration does not remove this dependence on earlier decisions.
+Month matching and pooled calibration support the comparison, but do not by
+themselves isolate a causal wildfire effect.
+
+\textbf{Files.}
+\texttt{experiments/wildfire\_sensitivity/main.py} runs the screening.
+The source log is
+\nolinkurl{slurm/wildfire_sensitivity/run_until_stable_calibration_3086411.log}.
+Checkpoints, mappings, and split indices are under\\
+{\footnotesize\nolinkurl{/storage3/fs1/myu/Active/felixhu/weather_checkpoints/wildfire_sensitivity/3086411/}}.
+To rerun: \texttt{sbatch slurm/wildfire\_sensitivity/run\_until\_stable.slurm}.
+
+\begin{thebibliography}{1}
+\small
+\bibitem{kuleshov2018}
+V.~Kuleshov, N.~Fenner, and S.~Ermon (2018).
+\emph{Accurate Uncertainties for Deep Learning Using Calibrated Regression}.
+ICML, PMLR 80, pp.~2796--2804.
+\url{https://proceedings.mlr.press/v80/kuleshov18a.html}.
+\end{thebibliography}
+\end{document}

@@ -159,7 +159,64 @@ For a single sweep and sweep-until-stable along the sensitives, we get a final i
 ['P', 'LAND', 'SLP', 'WS', 'TS', 'DUST^(1/5)', 'EPV', 'CHL^(1/2)', 'DMS^(1/2)', 'SO2EM^(1/5)', 'CFLOW', 'CFMID', 'LTS', 'OMEGA', 'LWC^(1/5)', 'RH', 'T']
 ```
 
-The concern I have is whether the list itself is sensitive to the order in which we process sensisitive variables. Additionally, I need to write some code to ensure the counterfactual model is calibrated.
+### Expert Opinion
+
+Independent of the screening, expert assessment of which variables wildfire should move:
+
+> Among the variables, I would say that SWGDN, T, CFLOW, CFMID, LWP, CO, RH, PREC, and LWC are likely to be sensitive to wildfires. Changes in these variables could also indirectly affect PBLH, LTS, and OMEGA, although we are not sure about those yet.
+
+So nine likely sensitive, and three where any effect would be indirect and is uncertain.
+
+### Calibrated Run With a Clean Control (SLURM 3022866)
+
+Added a held-out clean control to the screening ([control.py](experiments/wildfire_sensitivity/control.py)). Coverage on wildfire trajectories is now compared against coverage on clean trajectories the model never trained on, month-matched to the wildfire group, instead of against the nominal 95%. This cancels model miscalibration and the Jun-Sep seasonal shift, which both depress coverage without any wildfire involvement.
+
+Result: only CO and LWP came out sensitive. Compared to the expert list, the screening **recovered 2 of 9** and missed seven.
+
+| covariate | control | drop | screening | expert |
+| --- | --- | --- | --- | --- |
+| CO^(1/5) | 89.2 | +5.2 | sensitive | sensitive |
+| LWP^(1/5) | 93.2 | +3.3 | sensitive | sensitive |
+| PBLH^(1/5) | 94.2 | +1.7 | insensitive | uncertain |
+| LTS | 98.9 | +1.2 | insensitive | uncertain |
+| PREC^(1/5) | 94.2 | +1.0 | insensitive | **sensitive** |
+| OMEGA | 97.6 | +1.0 | insensitive | uncertain |
+| T | 99.2 | +0.5 | insensitive | **sensitive** |
+| RH | 96.7 | +0.2 | insensitive | **sensitive** |
+| SWGDN | 98.0 | +0.0 | insensitive | **sensitive** |
+| CFLOW | 98.6 | -0.0 | insensitive | **sensitive** |
+| LWC^(1/5) | 97.0 | -0.0 | insensitive | **sensitive** |
+| CFMID | 97.1 | -0.1 | insensitive | **sensitive** |
+| P | — | — | not tested | not listed |
+| LAND | — | — | not tested | not listed |
+| SLP | — | — | not tested | not listed |
+| WS | — | — | not tested | not listed |
+| TS | — | — | not tested | not listed |
+| DUST^(1/5) | — | — | not tested | not listed |
+| EPV | — | — | not tested | not listed |
+| CHL^(1/2) | — | — | not tested | not listed |
+| DMS^(1/2) | — | — | not tested | not listed |
+| SO2EM^(1/5) | — | — | not tested | not listed |
+
+The last ten are the expert-chosen starting basis. They entered the run already classified as insensitive, so no model was trained for them. Note the expert named every covariate outside the basis and none inside it, so the expert list and the basis partition all 22 between them.
+
+The misses are explained by calibration, not physics. Six of the seven had over-dispersed models, with control coverage at or above 96.5% against a 95% nominal. Mean control coverage is 97.3% for the seven misses versus 91.2% for the two detections. Across all twelve, the drop correlates with control coverage at **r = -0.87** and with expert classification at **r = -0.05**.
+
+So the screening currently measures which candidate models produced sharp intervals, not which variables wildfire moves. The two detections are probably real. The ten insensitive calls should not be used to build M yet.
+
+SWGDN is the clearest failure: smoke attenuating surface shortwave is about as robust an aerosol signal as exists, and it scored +0.0 at 98.0% control coverage.
+
+Report: [wildfire sensitivity summary](reports/wildfire_sensitivity/summary.pdf).
+
+### What To Fix
+
+1. **Stop pooling all 241 timesteps.** Smoke is entrained over the continent and matters near arrival, so averaging it against 200+ unaffected ocean timesteps dilutes it by orders of magnitude. Report coverage per timestep, or restrict the decision to the arrival window.
+2. **Use the calibration number.** Control coverage is measured and then discarded; the decision uses only the difference. A model at 99.2% votes the same as one at 89.2%. Log interval width, and exclude or refit badly calibrated candidate models instead of letting them return a confident insensitive call.
+3. **Calibrate the margin.** The 2-point threshold was picked by hand. Split the control in half and measure the clean-versus-clean coverage gap to get the null distribution the margin should clear.
+4. **Check order dependence.** Candidates are screened sequentially and each reclassification enlarges M, so the result may depend on order. Still open; wants permutation testing.
+5. **Separate the training-set confound.** Carving the control out of training cost 24% of the training data (51,214 to 38,711 rows), which widens intervals, so some of the over-dispersion above may be self-inflicted. Compare against a run that keeps the full training set and uses the control for evaluation only.
+
+The earlier concern about order dependence still stands.
 
 ## Unbiased/Adjusted Causal Inference
 

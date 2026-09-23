@@ -17,15 +17,15 @@ instantiating `Engressor`, replacing the optimizer, and then calling
 ## The four report architectures (where each one lives)
 
 The real-data report compares four architectures. Three of them are the same
-LSTM encoder with a different *head*, so they share one file and are chosen by a
-flag rather than living in separate files:
+LSTM encoder with a different *head*, so they share the `lstm/` package and are
+chosen by a flag rather than living in separate modules:
 
 | Report architecture   | File                    | How to select it                          |
 | --------------------- | ----------------------- | ----------------------------------------- |
 | Vanilla (flat StoNet) | `vanilla_engression.py` | `--engression-model vanilla`              |
-| LSTM + default head   | `lstm_engression.py`    | `--engression-model lstm` (no head flag)  |
-| LSTM + StoNet head    | `lstm_engression.py`    | `--engression-model lstm --stonet-head`   |
-| LSTM + pre-additive   | `lstm_engression.py`    | `--engression-model lstm --pre-additive`  |
+| LSTM + default head   | `lstm/`                 | `--engression-model lstm` (no head flag)  |
+| LSTM + StoNet head    | `lstm/`                 | `--engression-model lstm --stonet-head`   |
+| LSTM + pre-additive   | `lstm/`                 | `--engression-model lstm --pre-additive`  |
 
 (`regularized_engression.py` and `adamw_engression.py` are the vanilla model
 with different optimizers, not separate architectures.)
@@ -37,7 +37,7 @@ You are not limited to the four built-in heads. `LSTMEngressionConfig` has a
 `nn.Module` trained with the energy loss works. Two forms are accepted:
 
 ```python
-from engression_modifications.lstm_engression import (
+from engression_modifications.lstm import (
     LSTMEngressionConfig, fit_lstm_engression, load_lstm_engressor_checkpoint,
 )
 

@@ -46,8 +46,13 @@ def _checkpoint_payload(
     x_std: torch.Tensor,
     y_mean: torch.Tensor,
     y_std: torch.Tensor,
+    val_loss: float | None = None,
 ) -> dict[str, object]:
-    """Build a reloadable checkpoint payload."""
+    """Build a reloadable checkpoint payload.
+
+    ``val_loss`` is the held-out energy loss when the fit was given a validation
+    set, and None otherwise. It is recorded for provenance only; reload ignores it.
+    """
 
     # Serialize the config field-by-field, dropping ``model``: a live nn.Module
     # cannot round-trip through the JSON-ish checkpoint config and its weights are
@@ -59,6 +64,7 @@ def _checkpoint_payload(
         "model_type": "lstm_engression",
         "epoch": int(epoch),
         "train_energy_loss": float(train_loss),
+        "val_energy_loss": None if val_loss is None else float(val_loss),
         "input_dim": int(input_dim),
         "out_dim": int(out_dim),
         "config": config_dict,

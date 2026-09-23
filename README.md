@@ -38,7 +38,15 @@ WeatherEngression/
 │   └── synthetic_weather.py
 ├── engression_modifications/        # all four report architectures live here
 │   ├── README.md
-│   ├── lstm_engression.py           # LSTM encoder + default / StoNet / pre-additive heads
+│   ├── lstm/                        # sequence-native LSTM engression package
+│   │   ├── config.py                # LSTMEngressionConfig (all knobs)
+│   │   ├── lstm_backbone.py         # shared DeterministicLSTMEncoder
+│   │   ├── generators.py            # one class per head + build_lstm_model
+│   │   ├── monotone.py              # monotone g for the pre-additive head
+│   │   ├── engressor.py             # LSTMEngressor (fitted wrapper)
+│   │   ├── preprocessing.py         # validation + standardization
+│   │   ├── training.py              # fit_lstm_engression
+│   │   └── checkpoint.py            # save / load_lstm_engressor_checkpoint
 │   ├── vanilla_engression.py        # flat StoNet baseline (wraps the engression package)
 │   ├── regularized_engression.py    # vanilla + classic Adam weight decay
 │   ├── adamw_engression.py          # vanilla + decoupled AdamW

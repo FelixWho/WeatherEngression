@@ -42,7 +42,7 @@ $$
 - `data_generation/`: synthetic weather-like time-series simulators with known conditional laws.
 - `engression_modifications/`: the engression models. All four report architectures live here:
   vanilla flat (`vanilla_engression.py`) and the LSTM encoder with default / StoNet / pre-additive
-  heads (`lstm_engression.py`, selected by `--stonet-head` / `--pre-additive`).
+  heads (the `lstm/` package, selected by `--stonet-head` / `--pre-additive`).
 - `archive/`: superseded prototype code, imported by nothing (see `archive/README.md`).
 - `resources/`: PDFs only; do not edit or overwrite paper PDFs.
 
@@ -74,8 +74,18 @@ Instead:
 
 - **Always submit heavy work as a SLURM batch job.** Write (or reuse) a `.slurm`
   file under `slurm/<task>/run.slurm` and `sbatch` it. Follow the existing files
-  in `slurm/` as templates (account `compute2-myu`, partition `general-gpu`,
-  `source .venv/bin/activate`, a CUDA sanity check, then the `python -u ...` call).
+  in `slurm/` as templates (partition `general-gpu`, `source .venv/bin/activate`,
+  a CUDA sanity check, then the `python -u ...` call).
+- **Always charge the `compute2-myu` account.** Every `.slurm` file must carry
+
+  ```bash
+  #SBATCH -A compute2-myu
+  ```
+
+  This applies to every job from here on, not just the existing ones. Omitting
+  `-A` silently falls back to the submitting user's default account, so the run
+  is not charged to this project's allocation. All 41 current files in `slurm/`
+  already use it; match them.
 - **Use the GPU whenever possible:** `-p general-gpu`, `#SBATCH -G 1`, and pass
   `--device cuda` to the script. Training that OOMs or crawls on the login node
   runs fine on a GPU node.
@@ -112,8 +122,26 @@ Use the non-preadditive models to test robustness when the engression paper's st
 - Do not be verbose. Concise and intuitive is the priority.
 - Lead with the answer; cut preamble, hedging, and exhaustive option lists.
 - Favor plain intuition over formal walls of text; add detail only when asked.
+- Match the answer's length to the question. A yes/no question gets yes or no
+  first, then a sentence or two of why. Not a restructured essay.
+- Do not add structure to short answers. No bolded headings, no bullet lists,
+  no tables for anything under roughly a paragraph. Just say it.
+- Do not volunteer caveats, edge cases, sizing wrinkles, or next steps that were
+  not asked for. If a caveat genuinely matters, one sentence, at the end.
+- Write like a normal person talking. Plain verbs, ordinary words. No flourish,
+  no metaphor, no rhetorical shape.
+- Banned phrasings, as examples of the style to avoid: "it lands", "that tracks",
+  "the case that proves your point", "worth your attention", "here is the thing",
+  and any sentence fragment used for emphasis. Say "you're right", "yes", "this is
+  a problem because X". Agreement and disagreement get stated, not dramatized.
+- Do not editorialize findings with words like sharp, troubling, striking, telling,
+  or damning. State the fact and let it stand.
 
 ## Implementation Principles
+
+- For wildfire-sensitivity analysis, use only results from `until_stable`
+  experiments in summaries, comparisons, and reports. Single-pass runs are not
+  part of the reported evidence going forward.
 
 - Keep synthetic data generators explicit enough that the true conditional distribution is available analytically or by a known sampler.
 - Prefer simple, inspectable data-generating processes before adding realism.

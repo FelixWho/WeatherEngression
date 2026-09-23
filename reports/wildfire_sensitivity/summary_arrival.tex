@@ -1,0 +1,166 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage[hidelinks]{hyperref}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt}
+\setlength{\tabcolsep}{7pt}
+
+\begin{document}
+\begin{center}
+{\Large Wildfire sensitivity at arrival: working note}\\[4pt]
+Until-stable run 3110691 $\cdot$ 19 September 2026 $\cdot$ two rounds, about 63 minutes
+\end{center}
+
+\textbf{Current result.}
+The original-order screening labels \textbf{T and CO sensitive}, and leaves
+\textbf{LTS and PREC undetermined}. Eight tested variables enter the insensitive set:
+PBLH, CFLOW, CFMID, SWGDN, LWP, OMEGA, LWC, and RH. Together with the ten starting
+assumptions (P, LAND, SLP, WS, TS, DUST, EPV, CHL, DMS, SO2EM), that gives
+18 insensitive variables. The starting ten were not tested. These are screening
+labels, not established causal effects. We use only until-stable experiments for
+reported results.
+
+\textbf{What is fitted and held out?}
+For each candidate $c$, a global-latent LSTM engressor learns
+$c_{\mathrm{arrival}}=f(M_{1:241},\varepsilon)$ on clean trajectories, where $M$ is
+the current insensitive input set. Inputs have shape $(N,241,|M|)$; training and
+validation targets have shape $(N,1)$, using the final array position as arrival.
+The model predicts one candidate value per draw. Recalibration and coverage also
+use only that arrival value. We pool the original clean
+training and test rows, then form four separate sets:
+
+\begin{center}
+\begin{tabular}{lrl}
+\toprule
+Clean set & Trajectories & Purpose \\
+\midrule
+Training & 23,564 & Fit the network \\
+Validation & 3,110 & Early stopping; select best checkpoint \\
+Recalibration & 1,350 & Fit the quantile correction \\
+Control / test & 2,159 & Check corrected coverage \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The clean pool has 54,026 trajectories; the other 23,843 are unused after time-gap
+purging and month matching. Recalibration and control are separately month-matched
+to 6,786 wildfire trajectories. Splits use 30-day arrival-time blocks with history
+gaps at both boundaries. Wildfire outcomes are used only for evaluation.
+
+\textbf{What recalibration changes.}
+Kuleshov, Fenner, and Ermon~\cite{kuleshov2018} fit a monotone map from predicted
+CDF probabilities to observed frequencies, recommending isotonic regression.
+Our implementation uses a simpler empirical quantile map. On the recalibration
+rows, compute each observation's position $u_i=F_i(y_i)$ in the base model's
+predictive distribution, approximated by randomized ranks among 400 draws.
+Pool these positions across arrival observations, then use
+\[
+ p_q=\operatorname{Quantile}_q(\{u_i\}),
+ \qquad Q_{\mathrm{corrected},x}(q)=Q_{\mathrm{base},x}(p_q).
+\]
+The network is unchanged. One mapping per candidate adjusts all its quantile
+predictions. A central 90\% interval uses corrected 5th and 95th percentiles;
+a 95\% interval uses corrected 2.5th and 97.5th percentiles. The same mapping is
+applied to control and wildfire data. Fitting the correction does not guarantee
+that it achieves the target coverage on the separate control set.
+
+\textbf{Decision rule.}
+A model is accepted if its control coverage at both 90\% and 95\% lies within
+$\pm3$ estimated standard errors of nominal. Standard errors use 30-day blocks
+and the same observation weighting as pooled coverage. A failed check leaves
+$c$ undetermined and outside $M$. For accepted models, a control-minus-wildfire
+95\% coverage drop greater than two percentage points is sensitive; otherwise
+$c$ enters $M$. Sensitive and undetermined candidates are retried after $M$ grows.
+The run stops when a round adds nobody.
+
+\newpage
+\small
+\textbf{Latest assessment of each tested candidate.}
+Original-order run 3110691: arrival coverage in percent; drops in percentage points.
+The eight insensitive labels were retained from round 1; LTS, T, CO, and PREC
+were reassessed in round 2, which added nobody.
+
+\begin{center}
+\small
+\begin{tabular}{lrrrrl}
+\toprule
+ & \multicolumn{2}{c}{Clean coverage} & Wildfire & & \\
+Candidate & 90\% interval & 95\% interval & 95\% interval & Drop & Decision \\
+\midrule
+T     & 82.6 & 89.3 & 87.0 & $+2.3$ & Sensitive \\
+CO    & 91.6 & 94.5 & 69.8 & $+24.7$ & Sensitive \\
+\midrule
+PBLH  & 91.5 & 95.0 & 95.6 & $-0.7$ & Insensitive \\
+CFLOW & 88.9 & 93.3 & 96.2 & $-2.9$ & Insensitive \\
+CFMID & 91.3 & 96.0 & 95.9 & $+0.1$ & Insensitive \\
+SWGDN & 87.6 & 93.9 & 93.5 & $+0.4$ & Insensitive \\
+LWP   & 85.7 & 93.1 & 93.6 & $-0.5$ & Insensitive \\
+OMEGA & 88.2 & 93.8 & 94.7 & $-0.9$ & Insensitive \\
+LWC   & 88.7 & 93.3 & 94.3 & $-1.1$ & Insensitive \\
+RH    & 87.4 & 91.4 & 93.1 & $-1.7$ & Insensitive \\
+\midrule
+LTS   & 68.1 & 83.4 & --- & --- & Undetermined \\
+PREC  & 69.2 & 75.9 & --- & --- & Undetermined \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\smallskip
+Drops were calculated before rounding, so subtracting the displayed coverages
+can differ by 0.1 point. Names omit the stored feature transforms: PBLH, LWP,
+LWC, CO, PREC, DUST, and SO2EM use fifth roots; CHL and DMS use square roots.
+
+\textbf{How much should we trust these labels?}
+CO has a 24.7-point drop and clean 95\% coverage of 94.5\%. T's drop is only 2.3
+points; its 89.3\% clean coverage passes a wide 88.5--101.5\% band. LTS and PREC
+fail calibration, so wildfire coverage is not assessed. The two-point cutoff is
+not a significance test, and these labels do not establish causality. Accepting
+a variable at arrival also does not establish that its full history is insensitive.
+
+\textbf{Shuffle order results.}
+Each shuffle seed permutes candidates once and retains that order among survivors.
+All runs use arrival-only targets and training/split seed 2026; split indices match
+across completed runs. Only candidate order is deliberately changed.
+Status below is as of 23 September 2026.
+
+\begin{center}
+\small
+\begin{tabular}{llrll}
+\toprule
+Order & Job & Rounds & Sensitive & Undetermined \\
+\midrule
+Original & 3110691 & 2 & T, CO & LTS, PREC \\
+Seed 2027 & 3110763 & 4 & CO & LTS \\
+Seed 2028 & 3112708 & 3 & CO & LTS \\
+Seed 2029 & 3112709 & 3 & CO & LTS \\
+Seed 2030 & 3147106 & \multicolumn{3}{l}{Pending; no results yet} \\
+Seed 2031 & 3147107 & \multicolumn{3}{l}{Pending; no results yet} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+The three completed shuffles agree: CO sensitive, LTS undetermined, and the other
+ten tested variables insensitive (20 including the starting ten). Compared with
+the original order, only T and PREC change, both becoming insensitive. Thus order
+changes the labels, but does not resolve calibration concerns: T's 83.0\% clean
+95\% coverage in seed 2027 passes a wide 80.2--109.8\% band. Pending runs are not
+included in the agreement count.
+
+{\footnotesize
+\textbf{Files.} Source logs are under \nolinkurl{slurm/wildfire_sensitivity/};
+filenames end in \texttt{\_<job ID>.log}, using the IDs above.\\
+Models, mappings, and splits: each job's \texttt{arrival/} folder under\\
+\nolinkurl{/storage3/fs1/myu/Active/felixhu/weather_checkpoints/wildfire_sensitivity/}.
+}
+
+\begin{thebibliography}{1}
+\small
+\bibitem{kuleshov2018}
+V.~Kuleshov, N.~Fenner, and S.~Ermon (2018).
+\emph{Accurate Uncertainties for Deep Learning Using Calibrated Regression}.
+ICML, PMLR 80, pp.~2796--2804.
+\url{https://proceedings.mlr.press/v80/kuleshov18a.html}.
+\end{thebibliography}
+\end{document}
