@@ -73,6 +73,7 @@ from data_generation.ena_weather import (
 from engression_modifications.lstm import load_lstm_engressor_checkpoint
 from experiments.real_data_diagnostic import QUANTILE_LEVELS, predict_quantiles_and_samples
 from experiments.real_metrics import pit_values
+from experiments.calibration import ad_statistic_uniform, _ad_statistic_rows, ad_mc_pvalue
 
 # Sweep the following parameters.
 # Same grid and ordering as slurm/pit_charts_stochastic_sweep_oos/run.slurm.
@@ -84,8 +85,6 @@ HIDDENS = (128, 192)
 DEFAULT_SWEEP_SUBDIR = Path("runs/real_data_diagnostics/ena_weather/log10_ccn/paper/lstm_stochastic_sweep_oos")
 DEFAULT_CKPT_ROOT = Path("/storage3/fs1/myu/Active/felixhu/weather_checkpoints")
 
-_EPS = 1e-12
-
 
 def grid_tags() -> list[str]:
     """The 48 config tags, one per sweep cell (``variant_lr..._l..._h...``)."""
@@ -94,42 +93,6 @@ def grid_tags() -> list[str]:
     for variant, lr, layers, hidden in itertools.product(VARIANTS, LRS, LAYERS, HIDDENS):
         tags.append(f"{variant}_lr{lr}_l{layers}_h{hidden}")
     return tags
-
-
-def ad_statistic_uniform(pit: np.ndarray) -> float:
-    """Anderson-Darling A^2 of ``pit`` against a fully specified Uniform(0, 1).
-
-    A^2 = -n - (1/n) * sum_i (2i-1) * [ ln u_(i) + ln(1 - u_(n+1-i)) ],
-
-    with ``u`` the sorted PIT clipped off the 0/1 boundary so the logs stay finite.
-    """
-
-    u = np.sort(np.clip(np.asarray(pit, dtype=np.float64), _EPS, 1.0 - _EPS))
-    n = u.size
-    idx = np.arange(1, n + 1)
-    total = np.sum((2 * idx - 1) * (np.log(u) + np.log(1.0 - u[::-1])))
-    return float(-n - total / n)
-
-
-def _ad_statistic_rows(sorted_rows: np.ndarray) -> np.ndarray:
-    """Vectorized A^2 for many already-sorted uniform samples (rows of equal n)."""
-
-    n = sorted_rows.shape[1]
-    idx = np.arange(1, n + 1)
-    log_u = np.log(np.clip(sorted_rows, _EPS, 1.0 - _EPS))
-    log_1m = np.log(np.clip(1.0 - sorted_rows, _EPS, 1.0 - _EPS))
-    total = np.sum((2 * idx - 1) * (log_u + log_1m[:, ::-1]), axis=1)
-    return -n - total / n
-
-
-def ad_mc_pvalue(a2_obs: float, n: int, n_sim: int, seed: int) -> float:
-    """Monte-Carlo p-value for A^2 under the Uniform(0, 1) null at sample size n."""
-
-    rng = np.random.default_rng(seed)
-    sims = rng.random((n_sim, n))
-    sims.sort(axis=1)
-    a2 = _ad_statistic_rows(sims)
-    return float((1 + np.sum(a2 >= a2_obs)) / (n_sim + 1))
 
 
 def integrated_autocorr_time(z: np.ndarray, max_lag: int | None = None) -> float:

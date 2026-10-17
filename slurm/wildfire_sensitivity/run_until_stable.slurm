@@ -13,8 +13,8 @@
 # Same job as run.slurm with --screening-mode until_stable: after a pass moves
 # covariates into the insensitive set M, sensitive and undetermined candidates
 # are re-tested against the now-larger M until a whole round moves nobody.
-# Every fit must pass the central 90% and 95% clean-control calibration checks
-# before a sensitivity decision; run.slurm logs the active thresholds.
+# Every fit must pass the selected clean-control check before a sensitivity
+# decision; run.slurm logs the metric and thresholds (coverage by default).
 # Each round refits every remaining candidate from scratch; the whole job has
 # a four-hour limit, matching the single-pass job.
 #

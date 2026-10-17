@@ -25,6 +25,11 @@ from engression_modifications.lstm import (
     load_lstm_engressor_checkpoint,
 )
 from engression_modifications.recalibrated_engressor import RecalibratedEngressor
+from experiments.calibration import (
+    AD_ALPHA, AD_BOOTSTRAP_REPLICATES, AD_BOOTSTRAP_SEED, AD_MIN_BLOCKS,
+    ad_block_bootstrap, validate_ad_settings,
+    validate_evaluation_targets, validate_evaluation_outputs,
+)
 from experiments.pipeline import set_reproducible_seeds
 from experiments.real_metrics import pit_calibration_metrics, pit_values
 from experiments.t_learner.train import DEFAULT_CKPT_ROOT
@@ -77,8 +82,8 @@ QUANTILE_LEVELS = tuple(sorted({
 }))
 PIT_BINS = 10
 # A level passes when its coverage sits within this many standard errors of the
-# level itself. Use 3-SE bands; only the central 90% and 95%
-# levels determine acceptance. The other levels remain descriptive diagnostics.
+# level itself. In coverage mode, only the central 90% and 95% levels determine
+# acceptance. In AD mode, all coverage levels remain descriptive diagnostics.
 CALIBRATION_TOLERANCE_SE = 3.0
 
 # Checkpoints go to storage3 alongside every other run; /home has a small quota.
@@ -175,31 +180,6 @@ def filter_dataset_columns(
     return data[:, :, feature_idxs], data[:, :, target_idx]
 
 
-def validate_evaluation_targets(x, y, evaluation_scope):
-    """Reject scope/shape mismatches before sampling, including accidental broadcasting."""
-    if evaluation_scope not in ("arrival", "trajectory"):
-        raise ValueError(f"unknown evaluation scope: {evaluation_scope!r}")
-    if x.ndim != 3 or y.ndim != 2 or not len(x) or x.shape[1] == 0:
-        raise ValueError("expected nonempty X (rows, timesteps, features) and y (rows, outputs)")
-    expected_outputs = 1 if evaluation_scope == "arrival" else x.shape[1]
-    if y.shape != (len(x), expected_outputs):
-        raise ValueError(f"{evaluation_scope} requires y shape {(len(x), expected_outputs)}, got {y.shape}")
-    if not np.isfinite(y).all():
-        raise ValueError("observed targets must be finite")
-
-
-def validate_evaluation_outputs(samples, y):
-    """Require one predictive distribution per target; never slice a wrong model to fit."""
-    if samples.ndim != 3 or samples.shape[:2] != y.shape or samples.shape[2] < 2:
-        raise ValueError(f"sample shape {samples.shape} does not match target shape {y.shape}")
-    # All callers sample on CPU. Reject invalid forecasts rather than counting
-    # NaN comparisons as ordinary coverage misses or converting them into PITs.
-    values = samples.numpy() if isinstance(samples, torch.Tensor) else samples
-    if not np.isfinite(values).all():
-        raise ValueError("predictive samples must be finite")
-    return samples, y
-
-
 def recalibrate_counterfactual(model, x, y, mapping_path, evaluation_scope="trajectory"):
     """Fit one pooled quantile mapping using only clean recalibration rows."""
     if not len(x):
@@ -284,12 +264,17 @@ def print_calibration(
     time_days: np.ndarray,
     plot_path: Optional[Path] = None,
     evaluation_scope: str = "trajectory",
+    calibration_metric: str = "coverage",
+    ad_alpha: float = AD_ALPHA,
+    ad_bootstrap_replicates: int = AD_BOOTSTRAP_REPLICATES,
+    ad_bootstrap_seed: int = AD_BOOTSTRAP_SEED,
 ) -> dict[str, object]:
     """Print calibration metrics for a trained counterfactual model on (x, y).
 
     Central and one-sided coverage use the wrapper's adjusted quantile boundaries,
     exactly as interval_coverage does. The PIT histogram and moments describe the
-    RAW base-model samples, since the wrapper recalibrates quantiles only.
+    RAW base-model samples. In AD mode, a separate corrected PIT is computed
+    from the SAME draws using the full recalibration mapping.
 
     Whether a level passes is judged against how much its coverage moves by chance,
     not against a hand-picked tolerance. ``time_days`` gives each row's arrival
@@ -309,12 +294,15 @@ def print_calibration(
 
     Like the screening's coverage, this pools the selected timesteps. The
     histogram is printed as text so it shows up in the SLURM log, and also saved as
-    a PNG when ``plot_path`` is given. Acceptance requires passing both levels in
-    ``CALIBRATION_REQUIRED_LEVELS`` with finite uncertainty estimates; other
-    levels are diagnostic only. Returns the numbers for reuse.
+    a PNG when ``plot_path`` is given. The default coverage gate requires both
+    ``CALIBRATION_REQUIRED_LEVELS`` with finite uncertainty; the optional AD gate
+    uses only its block-bootstrap p-value. Returns the numbers for reuse.
     """
 
     validate_evaluation_targets(x, y, evaluation_scope)
+    if calibration_metric not in ("coverage", "ad"):
+        raise ValueError(f"unknown calibration metric: {calibration_metric!r}")
+    validate_ad_settings(ad_alpha, ad_bootstrap_replicates, ad_bootstrap_seed)
     if np.asarray(time_days).shape != (len(x),) or not np.isfinite(time_days).all():
         raise ValueError("calibration requires one finite arrival time per row")
     if not isinstance(model, RecalibratedEngressor):
@@ -323,6 +311,13 @@ def print_calibration(
         torch.mps.empty_cache()
 
     pit_batches = []
+    corrected_pit_batches = []
+    ad_mapping_error = None
+    if calibration_metric == "ad":
+        try:
+            model.require_full_mapping()
+        except ValueError as exc:
+            ad_mapping_error = str(exc)
     inside_batches = {level: [] for level in CALIBRATION_LEVELS}
     below_counts = {level: 0 for level in CALIBRATION_LEVELS}
     for start in range(0, len(x), EVALUATION_BATCH_SIZE):
@@ -339,6 +334,10 @@ def print_calibration(
             inside_batches[level].append((observed >= lower) & (observed <= upper))
             below_counts[level] += int((observed <= boundaries[level]).sum())
         samples = samples.numpy()                         # (batch, timesteps, samples)
+        if calibration_metric == "ad" and ad_mapping_error is None:
+            corrected_pit_batches.append(model.pit_from_samples(
+                samples, observed, seed=SWEEP_SEED + start,
+            ))
         n_rows, n_steps, n_samples = samples.shape
         pit_batches.append(
             pit_values(
@@ -386,6 +385,23 @@ def print_calibration(
     calibrated = sufficient_blocks and all(
         passes[level] for level in CALIBRATION_REQUIRED_LEVELS
     )
+    coverage_calibrated = calibrated
+    ad_result = None
+    if calibration_metric == "ad":
+        ad_result = ad_block_bootstrap(
+            np.concatenate(corrected_pit_batches) if corrected_pit_batches else np.array([]),
+            time_days, alpha=ad_alpha, n_bootstrap=ad_bootstrap_replicates,
+            seed=ad_bootstrap_seed, block_days=HOLDOUT_BLOCK_DAYS,
+        )
+        ad_result.update(evaluation_scope=evaluation_scope,
+                         pit_is_recalibrated=model.is_recalibrated,
+                         prediction_samples=PREDICTION_SAMPLES,
+                         evaluation_batch_size=EVALUATION_BATCH_SIZE,
+                         pit_batch_base=SWEEP_SEED,
+                         sampling_seed=None)
+        if ad_mapping_error is not None:
+            ad_result.update(reason=ad_mapping_error, pit_is_recalibrated=False)
+        calibrated = ad_result["accepted"]
     summary = pit_calibration_metrics(pit, n_bins=PIT_BINS)
     counts, edges = np.histogram(pit, bins=PIT_BINS, range=(0.0, 1.0))
     shares = counts / pit.size
@@ -406,12 +422,21 @@ def print_calibration(
             f"    {level:>5.0%}   {central[level]:>16.1%}   {below[level]:>14.1%}   "
             f"{band_text}   {'pass' if passes[level] else 'FAIL':>7}"
         )
-    if not sufficient_blocks:
+    if calibration_metric == "ad":
+        verdict = ad_result["reason"]
+        if not calibrated:
+            verdict += " -> undetermined"
+        pit_label = "corrected" if ad_result["pit_is_recalibrated"] else "raw/unavailable"
+        print(f"    AD on {pit_label} PIT: A^2={ad_result['statistic']}, "
+              f"p={ad_result['p_value']}, alpha={ad_alpha:g}; "
+              f"{ad_bootstrap_replicates} bootstrap replicates, seed={ad_bootstrap_seed}")
+    elif not sufficient_blocks:
         verdict = "insufficient blocks -> undetermined"
     elif calibrated:
         verdict = "accepted: central 90% and 95% coverage pass"
     else:
         verdict = "central 90% or 95% coverage failed -> undetermined"
+    print(f"    acceptance metric: {calibration_metric}")
     print(f"    verdict: {verdict}")
     print(
         f"    raw-model PIT mean {summary['pit_mean']:.3f} (ideal 0.500)   "
@@ -453,6 +478,11 @@ def print_calibration(
         "tolerance": tolerance,
         "passes": passes,
         "calibrated": calibrated,
+        "coverage_calibrated": coverage_calibrated,
+        "calibration_metric": calibration_metric,
+        "acceptance_reason": verdict,
+        "model_is_recalibrated": model.is_recalibrated,
+        "ad": ad_result,
         "n_blocks": n_blocks,
         "pit_counts": counts,
         "pit_is_recalibrated": False,
@@ -461,12 +491,42 @@ def print_calibration(
     }
 
 
+def _json_ready(value):
+    """Strict JSON for diagnostics, including invalid checks (null, never NaN)."""
+    if isinstance(value, dict):
+        return {str(k): _json_ready(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple, np.ndarray)):
+        return [_json_ready(v) for v in value]
+    if isinstance(value, np.generic):
+        value = value.item()
+    if isinstance(value, float) and not np.isfinite(value):
+        return None
+    return value
+
+
 def main(screening_mode: str, mat_path: str, checkpoint_dir: Path,
-         evaluation_scope: str = "trajectory", candidate_order_seed: Optional[int] = None) -> None:
+         evaluation_scope: str = "trajectory", candidate_order_seed: Optional[int] = None,
+         calibration_metric: str = "coverage", ad_alpha: float = AD_ALPHA,
+         ad_bootstrap_replicates: int = AD_BOOTSTRAP_REPLICATES,
+         ad_bootstrap_seed: int = AD_BOOTSTRAP_SEED) -> None:
     if candidate_order_seed is not None and candidate_order_seed < 0:
         raise ValueError("candidate order seed must be nonnegative")
     if evaluation_scope not in ("trajectory", "arrival"):
         raise ValueError(f"unknown evaluation scope: {evaluation_scope!r}")
+    if calibration_metric not in ("coverage", "ad"):
+        raise ValueError(f"unknown calibration metric: {calibration_metric!r}")
+    validate_ad_settings(ad_alpha, ad_bootstrap_replicates, ad_bootstrap_seed)
+    calibration_settings = {
+        "metric": calibration_metric,
+        "coverage_required_levels": CALIBRATION_REQUIRED_LEVELS,
+        "coverage_tolerance_se": CALIBRATION_TOLERANCE_SE,
+        "block_days": HOLDOUT_BLOCK_DAYS,
+        "ad_alpha": ad_alpha,
+        "ad_bootstrap_replicates": ad_bootstrap_replicates,
+        "ad_bootstrap_seed": ad_bootstrap_seed,
+        "ad_min_blocks": AD_MIN_BLOCKS,
+    }
+    print(f"Calibration settings: {json.dumps(calibration_settings)}", flush=True)
     seeds = {
         "sweep": SWEEP_SEED,
         "dataset": SWEEP_SEED,
@@ -487,6 +547,9 @@ def main(screening_mode: str, mat_path: str, checkpoint_dir: Path,
         "prediction_draws": "continue the Torch RNG stream from training; no separate sampling seed is set",
         "pit_batches": "pit_batch_base + zero-based batch start row, separately for recalibration and control",
     }
+    if calibration_metric == "ad":
+        seeds["ad_bootstrap"] = ad_bootstrap_seed
+        seed_usage["ad_bootstrap"] = "separate local NumPy generator; same seed for each check"
     # Print before data loading so even an interrupted run records its seeds.
     print("Random seeds:", flush=True)
     for name, seed in seeds.items():
@@ -632,6 +695,7 @@ def main(screening_mode: str, mat_path: str, checkpoint_dir: Path,
         "seeds": seeds,
         "seed_usage": seed_usage,
         "screening_mode": screening_mode,
+        "calibration_settings": calibration_settings,
         "training_batch_size": TRAINING_BATCH_SIZE,
         "evaluation_batch_size": EVALUATION_BATCH_SIZE,
         "prediction_samples": PREDICTION_SAMPLES,
@@ -706,7 +770,22 @@ def main(screening_mode: str, mat_path: str, checkpoint_dir: Path,
                 dataset.time[control_index],
                 plot_path=round_dir / f"{slugify(c)}_raw_pit.png",
                 evaluation_scope=evaluation_scope,
+                calibration_metric=calibration_metric,
+                ad_alpha=ad_alpha,
+                ad_bootstrap_replicates=ad_bootstrap_replicates,
+                ad_bootstrap_seed=ad_bootstrap_seed,
             )
+            round_dir.mkdir(parents=True, exist_ok=True)
+            (round_dir / f"{slugify(c)}_calibration.json").write_text(json.dumps(_json_ready({
+                "candidate": c, "screening_round": screening_round,
+                "conditioning_covariates": list(insensitive_covariates),
+                "evaluation_scope": evaluation_scope,
+                "calibration_settings": calibration_settings,
+                "seeds": seeds, "seed_usage": seed_usage,
+                "prediction_samples": PREDICTION_SAMPLES,
+                "evaluation_batch_size": EVALUATION_BATCH_SIZE,
+                "metrics": calibration,
+            }), indent=2, allow_nan=False) + "\n")
             if not calibration["calibrated"]:
                 classifications[c] = "undetermined"
                 next_remaining_covariates.append(c)
@@ -715,7 +794,7 @@ def main(screening_mode: str, mat_path: str, checkpoint_dir: Path,
                 print(f"  finished: {timestamp()} ({elapsed_minutes:.1f} min)")
                 continue
 
-            # Use the exact control coverage that passed the check, avoiding a
+            # Reuse the control coverage measured alongside the selected gate, avoiding a
             # second Monte-Carlo draw with slightly different interval coverage.
             control_coverage = calibration["central"][0.95]
 
@@ -761,8 +840,14 @@ def main(screening_mode: str, mat_path: str, checkpoint_dir: Path,
         candidates = [c for c, result in classifications.items() if result == classification]
         print(f"  {classification}: {candidates}")
 
-if __name__ == "__main__":
+def build_parser():
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--calibration-metric", choices=("coverage", "ad"), default="coverage",
+                        help="Clean-control acceptance gate: 90/95 coverage or corrected-PIT AD.")
+    parser.add_argument("--ad-alpha", type=float, default=AD_ALPHA,
+                        help="Reject calibration when the AD bootstrap p-value is below this level.")
+    parser.add_argument("--ad-bootstrap-replicates", type=int, default=AD_BOOTSTRAP_REPLICATES)
+    parser.add_argument("--ad-bootstrap-seed", type=int, default=AD_BOOTSTRAP_SEED)
     parser.add_argument(
         "--candidate-order-seed", type=int, default=None,
         help="Shuffle candidates once using a separate seed; omit to retain original order. "
@@ -792,4 +877,8 @@ if __name__ == "__main__":
         default=DEFAULT_CHECKPOINT_DIR,
         help="Where per-candidate checkpoints are written.",
     )
-    main(**vars(parser.parse_args()))
+    return parser
+
+
+if __name__ == "__main__":
+    main(**vars(build_parser().parse_args()))

@@ -13,7 +13,8 @@
 # Pools clean paper-train and paper-test rows, then creates separate training,
 # validation, recalibration, and control sets. The best validation checkpoint is
 # wrapped with pooled quantile corrections fitted on the recalibration rows. It must
-# pass central 90% and 95% clean-control coverage checks (within 3 block SE).
+# pass the selected clean-control check: coverage (default, central 90% and 95%
+# within 3 block SE), or corrected-PIT AD (p >= AD_ALPHA).
 # Failed checks leave the candidate undetermined and out of the input set M.
 # Accepted models compare central 95% wildfire coverage against the clean control;
 # a drop greater than two percentage points is sensitive, otherwise insensitive.
@@ -36,6 +37,10 @@ source .venv/bin/activate
 
 SCREENING_MODE="${SCREENING_MODE:-single_pass}"
 EVALUATION_SCOPE="${EVALUATION_SCOPE:-trajectory}"
+CALIBRATION_METRIC="${CALIBRATION_METRIC:-coverage}"
+AD_ALPHA="${AD_ALPHA:-0.05}"
+AD_BOOTSTRAP_REPLICATES="${AD_BOOTSTRAP_REPLICATES:-2000}"
+AD_BOOTSTRAP_SEED="${AD_BOOTSTRAP_SEED:-2430}"
 ORDER_ARGS=()
 if [[ -n "${CANDIDATE_ORDER_SEED:-}" ]]; then
   ORDER_ARGS=(--candidate-order-seed "${CANDIDATE_ORDER_SEED}")
@@ -49,6 +54,8 @@ CKPT_DIR="${CKPT_DIR:-${CKPT_ROOT}/${SLURM_JOB_ID:-local}}"
 echo "job id        : ${SLURM_JOB_ID:-local}"
 echo "screening     : ${SCREENING_MODE}"
 echo "scope         : ${EVALUATION_SCOPE}"
+echo "calibration   : ${CALIBRATION_METRIC}"
+echo "AD settings   : alpha=${AD_ALPHA}, replicates=${AD_BOOTSTRAP_REPLICATES}, seed=${AD_BOOTSTRAP_SEED}"
 echo "order seed    : ${CANDIDATE_ORDER_SEED:-original order}"
 echo "data          : ${MAT_PATH}"
 echo "checkpoints  -> ${CKPT_DIR}"
@@ -69,7 +76,8 @@ from experiments.wildfire_sensitivity.main import (
 )
 
 levels = ", ".join(f"{level:.0%}" for level in CALIBRATION_REQUIRED_LEVELS)
-print(f"calibration   : central {levels}; each within {CALIBRATION_TOLERANCE_SE:g} block SE")
+print(f"coverage gate : central {levels}; each within {CALIBRATION_TOLERANCE_SE:g} block SE")
+print("AD gate       : corrected PIT; null-centered 30-day block bootstrap; at least 10 blocks")
 print("failed checks : undetermined; excluded from the input set")
 print("evaluation    : best validation checkpoint")
 print("recalibration : pooled quantile mapping fitted on separate clean blocks")
@@ -78,6 +86,10 @@ PY
 python -u -m experiments.wildfire_sensitivity.main \
   --screening-mode "${SCREENING_MODE}" \
   --evaluation-scope "${EVALUATION_SCOPE}" \
+  --calibration-metric "${CALIBRATION_METRIC}" \
+  --ad-alpha "${AD_ALPHA}" \
+  --ad-bootstrap-replicates "${AD_BOOTSTRAP_REPLICATES}" \
+  --ad-bootstrap-seed "${AD_BOOTSTRAP_SEED}" \
   "${ORDER_ARGS[@]}" \
   --mat-path "${MAT_PATH}" \
   --checkpoint-dir "${CKPT_DIR}"

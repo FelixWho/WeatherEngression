@@ -123,7 +123,7 @@ a variable at arrival also does not establish that its full history is insensiti
 Each shuffle seed permutes candidates once and retains that order among survivors.
 All runs use arrival-only targets and training/split seed 2026; split indices match
 across completed runs. Only candidate order is deliberately changed.
-Status below is as of 23 September 2026.
+All five shuffled runs completed successfully; results updated 24 September 2026.
 
 \begin{center}
 \small
@@ -135,18 +135,18 @@ Original & 3110691 & 2 & T, CO & LTS, PREC \\
 Seed 2027 & 3110763 & 4 & CO & LTS \\
 Seed 2028 & 3112708 & 3 & CO & LTS \\
 Seed 2029 & 3112709 & 3 & CO & LTS \\
-Seed 2030 & 3147106 & \multicolumn{3}{l}{Pending; no results yet} \\
-Seed 2031 & 3147107 & \multicolumn{3}{l}{Pending; no results yet} \\
+Seed 2030 & 3147106 & 2 & T, CO & LTS, PBLH, CFLOW \\
+Seed 2031 & 3147107 & 3 & CO & LTS, LWC \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-The three completed shuffles agree: CO sensitive, LTS undetermined, and the other
-ten tested variables insensitive (20 including the starting ten). Compared with
-the original order, only T and PREC change, both becoming insensitive. Thus order
-changes the labels, but does not resolve calibration concerns: T's 83.0\% clean
-95\% coverage in seed 2027 passes a wide 80.2--109.8\% band. Pending runs are not
-included in the agreement count.
+CO is sensitive and LTS undetermined in all five shuffles. T is sensitive only
+with seed 2030; PBLH and CFLOW are undetermined only with seed 2030, and LWC only
+with seed 2031. All other tested variables are insensitive in every shuffle,
+including PREC (undetermined in the original order). Thus order affects the final
+labels. Agreement does not establish good calibration: T's 83.0\% clean 95\%
+coverage in seed 2027 still passes a wide 80.2--109.8\% band.
 
 {\footnotesize
 \textbf{Files.} Source logs are under \nolinkurl{slurm/wildfire_sensitivity/};

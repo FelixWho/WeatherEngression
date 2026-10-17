@@ -64,13 +64,48 @@ predictions and targets, and nonfinite predictions. Month matching stops if any
 wildfire month has no clean counterpart. See [the implementation audit](AUDIT.md)
 for checks and remaining statistical assumptions.
 
-Before comparing wildfire coverage, a model must pass the clean-control central
+With the default `--calibration-metric coverage`, a model must pass the clean-control central
 90% and 95% coverage checks. Each coverage must lie within 3 block standard
 errors of its nominal level. The standard errors use the same observation
 weighting as pooled coverage and include every block. The 50% and 75% checks and
 PIT summaries are still reported, but do not determine acceptance.
 
-If either required check fails, or there are too few blocks to estimate
+Alternatively, `--calibration-metric ad` uses an Anderson–Darling test of the
+**recalibrated** marginal PIT on those same held-out clean control rows. It rejects
+when the approximate block-bootstrap p-value is below `--ad-alpha` (default 0.05).
+The 90%/95% coverage checks remain diagnostics in this mode; they do not also have
+to pass. Both modes keep the same 95% control-versus-wildfire sensitivity rule.
+
+AD uses 30-day arrival blocks, at least 10 populated blocks, and 2,000 bootstrap
+replicates. All outputs of each trajectory stay together, including in trajectory
+mode. Blocks are resampled with replacement; their actual sizes preserve pooled
+observation weighting. The reference statistic is
+$N^*\int_0^1(\widehat F^*(u)-\widehat F(u))^2/[u(1-u)]\,du$,
+compared with observed $A^2$ against uniformity. Centering on the original empirical
+CDF estimates sampling variation rather than resampling the observed departure
+from uniformity. Integration is exact between clipped PIT breakpoints. P-values
+use $(1+\#\{A^{2*}\ge A^2\})/(B_{\mathrm{boot}}+1)$.
+
+This is an approximate check conditional on the fitted model and mapping. It
+assumes representative, approximately independent blocks, does not resample the
+recalibration fit, and does not establish conditional or joint calibration.
+Predictive PIT values are also Monte Carlo approximations with 400 draws. Before
+relying on AD classifications, inspect synthetic rejection rates from
+`slurm/ad_bootstrap_validation/run.slurm`: it includes IID and dependent uniform
+PIT, unequal blocks, an independently fitted recalibration map, and a
+miscalibrated alternative. This validation job is separate from screening.
+
+The wrapper now saves all sorted calibration PIT values in versioned JSON. Its
+linear empirical quantile interpolation preserves existing adjusted boundaries;
+the generalized inverse provides the corrected CDF. For ties, CDF/rank interval
+bounds are transformed **before** PIT randomization. This adds marginal CDF/PIT
+evaluation, not a corrected joint sampler. Old sparse quantile JSON files still
+work for coverage, but AD requires refitting their full mapping; it never falls
+back to raw PIT. The reusable model-facing API is
+`experiments.calibration.evaluate_ad(model, x, y, time_days, evaluation_scope=...)`;
+precomputed draws can use `model.pit_from_samples(...)` and `ad_block_bootstrap(...)`.
+
+If the selected check fails, is invalid, or there are too few blocks to estimate
 uncertainty, the candidate is **undetermined** and stays out of the insensitive
 input set. Accepted models use the existing sensitivity rule: a central 95%
 coverage drop greater than two percentage points. In `until_stable` mode,
@@ -102,6 +137,21 @@ sbatch slurm/wildfire_sensitivity/run_until_stable_arrival.slurm
 This dedicated job uses a four-hour GPU allocation and writes
 `run_until_stable_arrival_<jobid>.log`. It trains on full input histories with
 single arrival-value targets and evaluates those arrival values.
+
+To select AD for an arrival-only until-stable run:
+
+```bash
+sbatch --export=ALL,CALIBRATION_METRIC=ad slurm/wildfire_sensitivity/run_until_stable_arrival.slurm
+```
+
+The shared runner also accepts `AD_ALPHA`, `AD_BOOTSTRAP_REPLICATES`, and
+`AD_BOOTSTRAP_SEED` (defaults 0.05, 2000, 2430). The corresponding Python options
+are `--ad-alpha`, `--ad-bootstrap-replicates`, and `--ad-bootstrap-seed`.
+The bootstrap has its own local RNG and reuses existing prediction draws, so it
+does not advance the training or predictive sampling streams. Metric settings
+are saved in `screening_order.json`; each round also saves
+`<candidate>_calibration.json` with settings, seeds, measurements, acceptance, and
+reason. Invalid numerical fields are JSON `null`.
 
 `run_until_stable.slurm` is the same job with `--screening-mode until_stable`.
 Both read the `.mat` from storage3 and write checkpoints there; override with

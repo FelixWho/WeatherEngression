@@ -70,7 +70,7 @@ class CalibrationAcceptanceTests(unittest.TestCase):
 
 class ScreeningGateTests(unittest.TestCase):
     def run_screening(self, acceptance, mode, scope="trajectory", control_coverage=.95,
-                      wildfire_coverages=None, candidate_order_seed=None):
+                      wildfire_coverages=None, candidate_order_seed=None, calibration_metric="coverage"):
         names = (
             "P", "LAND", "SLP", "WS", "TS", "DUST^(1/5)", "EPV",
             "CHL^(1/2)", "DMS^(1/2)", "SO2EM^(1/5)", "CO^(1/5)", "LWP^(1/5)",
@@ -102,6 +102,8 @@ class ScreeningGateTests(unittest.TestCase):
 
         def assess(model, x, y, *args, **kwargs):
             self.assertEqual(kwargs["evaluation_scope"], scope)
+            self.assertEqual(kwargs["calibration_metric"], calibration_metric)
+            self.assertEqual(kwargs["ad_bootstrap_seed"], 2430)
             self.assertEqual(y.shape[1], 1 if scope == "arrival" else 2)
             np.testing.assert_array_equal(x[:, 0, 0], [6, 7])
             return {"calibrated": acceptance(model), "central": {0.95: control_coverage}}
@@ -139,7 +141,7 @@ class ScreeningGateTests(unittest.TestCase):
                 stack.enter_context(patch.object(screening, name, replacement))
             stack.enter_context(contextlib.redirect_stdout(output))
             screening.main(mode, "unused.mat", Path(directory), evaluation_scope=scope,
-                           candidate_order_seed=candidate_order_seed)
+                           candidate_order_seed=candidate_order_seed, calibration_metric=calibration_metric)
             self.assertEqual(screening.load_wildfire_arms.call_args.kwargs["seed"], 2026)
             self.assertEqual([call.kwargs["seed"] for call in screening.split_clean_holdout.call_args_list],
                              [2026, 2228, 2127])
@@ -154,7 +156,17 @@ class ScreeningGateTests(unittest.TestCase):
                 "recalibration_month_matching": 2228, "validation_split": 2127,
                 "pit_batch_base": 2026, "candidate_order": candidate_order_seed,
             }
+            if calibration_metric == "ad":
+                expected_seeds["ad_bootstrap"] = 2430
             self.assertEqual(order["seeds"], expected_seeds)
+            self.assertEqual(order["calibration_settings"]["metric"], calibration_metric)
+            candidate_files = list(artifacts.glob("round_*/*_calibration.json"))
+            self.assertEqual(len(candidate_files), fit.call_count)
+            for path in candidate_files:
+                record = json.loads(path.read_text())
+                self.assertEqual(record["seeds"], expected_seeds)
+                self.assertEqual(record["calibration_settings"]["metric"], calibration_metric)
+                self.assertIn("calibrated", record["metrics"])
             for name, seed in expected_seeds.items():
                 self.assertIn(f"  {name}: {seed}\n", output.getvalue())
             self.assertEqual(order["evaluation_batch_size"], screening.EVALUATION_BATCH_SIZE)
@@ -171,6 +183,18 @@ class ScreeningGateTests(unittest.TestCase):
                 }.items():
                     np.testing.assert_array_equal(splits[role], expected)
         return fit, intervals, output.getvalue()
+
+    def test_ad_mode_propagates_and_retries_undetermined_in_both_scopes(self):
+        for scope in ["arrival", "trajectory"]:
+            attempts = {}
+            def acceptance(candidate):
+                attempts[candidate] = attempts.get(candidate, 0) + 1
+                return candidate != "CO^(1/5)" or attempts[candidate] > 1
+            fit, intervals, output = self.run_screening(acceptance, "until_stable", scope,
+                                                       calibration_metric="ad")
+            self.assertEqual(fit.call_count, 3)
+            self.assertEqual(intervals.call_count, 2)
+            self.assertIn("undetermined: []", output)
 
     def test_order_seed_changes_order_reproducibly_without_changing_global_rng(self):
         numpy_state = np.random.get_state()
