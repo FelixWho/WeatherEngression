@@ -139,6 +139,11 @@ Use the non-preadditive models to test robustness when the engression paper's st
 
 ## Implementation Principles
 
+- Prioritize simple, intuitive methods over over-engineering. Start with the
+  simplest statistically defensible approach and test it before adding complexity.
+  Introduce more elaborate methods only when evidence shows the simpler approach
+  is inadequate; explain the need and tradeoff plainly.
+
 - For wildfire-sensitivity analysis, use only results from `until_stable`
   experiments in summaries, comparisons, and reports. Single-pass runs are not
   part of the reported evidence going forward.

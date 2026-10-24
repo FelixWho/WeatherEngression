@@ -95,6 +95,44 @@ relying on AD classifications, inspect synthetic rejection rates from
 PIT, unequal blocks, an independently fitted recalibration map, and a
 miscalibrated alternative. This validation job is separate from screening.
 
+The simpler time-spacing alternative is tested separately in
+`experiments/validate_ad_thinning.py`, submitted with
+`sbatch slurm/ad_thinning_validation/run.slurm`. It retains the earliest observation,
+then the next at least 30, 60, or 90 days later, and compares its AD score with
+IID-uniform simulations of the same retained sample size. A zero-gap baseline
+retains all observations. Selection uses timestamps only; there is one p-value
+per selected sample, with no averaging or selection among subset p-values.
+The experiment records false-rejection rates, power, uncertainty intervals,
+retained indices/counts, and seeds. It reuses the same synthetic dependence
+cases and observed block sizes as the bootstrap audit, but places synthetic
+blocks 30 days apart rather than using the actual ENA calendar. The IID reference
+is cached by sample size for efficiency. This experiment does not change the
+production calibration gate or establish that any spacing ensures independence.
+
+The follow-up audit (job `3571312`, seed 2432, 5,000 repetitions per case) found
+false-rejection rates of 4.9–5.4% at 30-day spacing when dependence was confined
+to independent blocks. With dependence across blocks, false rejections were
+22.3%, 11.5%, and 8.0% at 30/60/90 days. Those spacings retained 33/17/11 values;
+detection of the chosen miscalibrated alternative fell from 95.4% to 12.2% to
+2.4%. These are synthetic results, not a selection of an ENA spacing. Full
+settings, p-values, and uncertainty intervals are in
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/ad_thinning_validation/3571312/results.json`.
+The initial 500-repetition audit is retained under job `3571302`.
+
+For real-data spacing diagnostics, submit `sbatch slurm/pit_dependence/run.slurm`.
+It reloads the latest saved model for each candidate in the three arrival AD
+until-stable runs and samples only their saved clean recalibration rows. The full
+input histories and original conditioning-feature order are preserved. It saves
+raw/corrected PIT with timestamps and row IDs, correlations at elapsed-time lags
+of 1/3/7/10/14/21/30/60/90 days (±0.5-day bins), and correlations between adjacent
+retained observations after thinning at each minimum gap. Tail diagnostics use
+PIT ≤0.05 and ≥0.95. Outputs include pair counts, tail-event counts, retained
+sample counts, actual gap ranges, a heatmap, and seeds/checkpoint paths in a
+manifest. Pairs overlap, so the script does not attach IID confidence intervals
+or automatically declare independence. These are development diagnostics on the
+rows used to fit the recalibration map, not independent calibration validation;
+no control outcomes are evaluated and no production spacing or gate changes.
+
 The wrapper now saves all sorted calibration PIT values in versioned JSON. Its
 linear empirical quantile interpolation preserves existing adjusted boundaries;
 the generalized inverse provides the corrected CDF. For ties, CDF/rank interval
