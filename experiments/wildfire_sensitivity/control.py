@@ -1,4 +1,9 @@
-"""Clean control group for the wildfire-sensitivity screening.
+"""Production data splitting for wildfire-sensitivity screening.
+
+Start at split_screening_data(): control, then recalibration, then validation;
+the remaining rows train the models. The low-level block splitter and seasonal
+subsampler below implement those steps. Spaced-point alternatives are separate
+diagnostics in split_feasibility.py and do not change this production split.
 
 The screening asks whether a candidate covariate's wildfire-period values fall
 outside what a clean-trained model predicts. Comparing that coverage against the
@@ -11,13 +16,12 @@ the model never trained on, drawn to match the wildfire group's month
 distribution. Coverage on that control is what wildfire coverage gets compared
 against. Month matching does not guarantee equal model error in the two groups.
 
-Two details the ENA data forces:
+Two choices made by the current experiment:
 
-- **Time-blocked split.** Trajectories are hourly and overlapping, so two rows an
-  hour apart share 240 of their 241 hours. A random holdout would be the training
-  data again under a different name. The split therefore cuts contiguous blocks of
-  arrival time, discards the leading window of each holdout block, and purges fit
-  rows immediately after a holdout block. Both boundaries need a history gap.
+- **Time-blocked split.** Nearby arrivals have overlapping history dates and
+  may be dependent. The current conservative rule selects whole arrival-time
+  blocks and excludes a history-length gap at both boundaries. Overlapping
+  dates do not establish identical measurements; this rule is a design choice.
 - **Month matching.** Without it the control is a different season than the
   wildfire group, which is the confound it exists to remove.
 """
@@ -28,6 +32,43 @@ import numpy as np
 
 # MATLAB datenum is in days; the rest of this module works in hours.
 HOURS_PER_DAY = 24.0
+
+
+def split_screening_data(
+    clean_index, wildfire_index, time_days, *, window_hours, control_fraction,
+    recalibration_fraction, validation_fraction, block_days, seeds,
+) -> dict[str, np.ndarray]:
+    """Build the four clean roles once; every candidate uses these same rows.
+
+    Training fits weights, validation selects the checkpoint, recalibration fits
+    the quantile correction, and control checks it and supplies the clean coverage
+    baseline. Only control/recalibration are seasonally matched to wildfire.
+    The caller pools the original paper-train and paper-test clean observations.
+    """
+    fit, control_pool = split_clean_holdout(
+        clean_index, time_days, window_hours=window_hours,
+        holdout_fraction=control_fraction, block_days=block_days,
+        seed=seeds["control_split"],
+    )
+    control = month_matched_subsample(
+        control_pool, wildfire_index, time_days, seed=seeds["control_month_matching"],
+    )
+    fit, recalibration_pool = split_clean_holdout(
+        fit, time_days, window_hours=window_hours,
+        holdout_fraction=recalibration_fraction, block_days=block_days,
+        seed=seeds["recalibration_split"],
+    )
+    recalibration = month_matched_subsample(
+        recalibration_pool, wildfire_index, time_days,
+        seed=seeds["recalibration_month_matching"],
+    )
+    train, validation = split_clean_holdout(
+        fit, time_days, window_hours=window_hours,
+        holdout_fraction=validation_fraction, block_days=block_days,
+        seed=seeds["validation_split"],
+    )
+    return dict(train=train, validation=validation, recalibration=recalibration,
+                control=control, wildfire=wildfire_index)
 
 
 def time_blocks(time_days: np.ndarray, block_days: float) -> np.ndarray:

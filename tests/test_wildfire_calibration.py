@@ -13,6 +13,7 @@ import numpy as np
 import torch
 
 from experiments.wildfire_sensitivity import main as screening
+from experiments.wildfire_sensitivity import control, evaluation
 
 
 class CalibrationAcceptanceTests(unittest.TestCase):
@@ -31,7 +32,7 @@ class CalibrationAcceptanceTests(unittest.TestCase):
                 len(x), y.shape[1], sample_size
             ),
         )
-        with patch.object(screening, "pit_values", side_effect=lambda samples, y, seed: y):
+        with patch.object(evaluation, "pit_values", side_effect=lambda samples, y, seed: y):
             with contextlib.redirect_stdout(io.StringIO()):
                 return screening.print_calibration(
                     model, x, y, "test", times, evaluation_scope=scope
@@ -138,12 +139,13 @@ class ScreeningGateTests(unittest.TestCase):
                 "print_calibration": calibration,
                 "interval_coverage": intervals,
             }.items():
-                stack.enter_context(patch.object(screening, name, replacement))
+                owner = control if name in ("split_clean_holdout", "month_matched_subsample") else screening
+                stack.enter_context(patch.object(owner, name, replacement))
             stack.enter_context(contextlib.redirect_stdout(output))
             screening.main(mode, "unused.mat", Path(directory), evaluation_scope=scope,
                            candidate_order_seed=candidate_order_seed, calibration_metric=calibration_metric)
             self.assertEqual(screening.load_wildfire_arms.call_args.kwargs["seed"], 2026)
-            self.assertEqual([call.kwargs["seed"] for call in screening.split_clean_holdout.call_args_list],
+            self.assertEqual([call.kwargs["seed"] for call in control.split_clean_holdout.call_args_list],
                              [2026, 2228, 2127])
             artifacts = Path(directory) / "arrival" if scope == "arrival" else Path(directory)
             order = json.loads((artifacts / "screening_order.json").read_text())

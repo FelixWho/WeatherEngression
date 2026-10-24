@@ -17,6 +17,7 @@ from engression_modifications.lstm.generators import build_lstm_model
 from engression_modifications.lstm.preprocessing import standardization_stats
 from engression_modifications.recalibrated_engressor import RecalibratedEngressor
 from experiments.wildfire_sensitivity import main as screening
+from experiments.wildfire_sensitivity import counterfactual, evaluation
 from experiments.wildfire_sensitivity.control import month_matched_subsample
 
 
@@ -63,7 +64,7 @@ class NumericalAuditTests(unittest.TestCase):
             # Last batch has one row: averaging batch percentages would be wrong.
             for batch_size in [2, 5]:
                 with self.subTest(scope=scope, batch_size=batch_size), \
-                     patch.object(screening, "EVALUATION_BATCH_SIZE", batch_size), \
+                     patch.object(evaluation, "EVALUATION_BATCH_SIZE", batch_size), \
                      contextlib.redirect_stdout(io.StringIO()):
                     metrics = screening.print_calibration(
                         model, x, y, "control", times, evaluation_scope=scope
@@ -90,7 +91,8 @@ class NumericalAuditTests(unittest.TestCase):
             base = uniform_model(outputs)
             with self.subTest(scope=scope), TemporaryDirectory() as directory, \
                  contextlib.redirect_stdout(io.StringIO()), \
-                 patch.object(screening, "EVALUATION_BATCH_SIZE", 37):
+                 patch.object(evaluation, "EVALUATION_BATCH_SIZE", 37), \
+                 patch.object(counterfactual, "EVALUATION_BATCH_SIZE", 37):
                 path = Path(directory) / "mapping.json"
                 fitted = screening.recalibrate_counterfactual(base, x, fit_y, path, scope)
                 loaded = RecalibratedEngressor.load(base, path)
@@ -164,8 +166,8 @@ class TrainingAndReloadAuditTests(unittest.TestCase):
             y = np.zeros((4, width), dtype=np.float32)
             final, best = object(), object()
             with TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()), \
-                 patch.object(screening, "fit_lstm_engression", return_value=final) as fit, \
-                 patch.object(screening, "load_lstm_engressor_checkpoint", return_value=best) as reload:
+                 patch.object(counterfactual, "fit_lstm_engression", return_value=final) as fit, \
+                 patch.object(counterfactual, "load_lstm_engressor_checkpoint", return_value=best) as reload:
                 result = screening.train_counterfactual(x, y, "T", Path(directory), x.copy(), y.copy())
                 self.assertIs(result, best)
                 self.assertEqual(tuple(fit.call_args.args[1].shape), (4, width))

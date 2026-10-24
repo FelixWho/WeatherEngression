@@ -31,7 +31,8 @@ or original preparation code remains outstanding.
 
 - Training, validation, recalibration, and clean-control rows are disjoint;
   sequential block splits guard both temporal boundaries. Inputs retain their
-  full history in arrival mode, so the temporal guards remain necessary.
+  full history in arrival mode. The guards are the current conservative design,
+  not an established requirement based on history length alone.
 - Recalibration uses its own clean rows. PIT values are flattened over selected
   target coordinates and used to fit one probability mapping per candidate.
   The mapping is fixed for clean-control and wildfire evaluation.

@@ -13,6 +13,7 @@ import torch
 
 from engression_modifications.recalibrated_engressor import RecalibratedEngressor
 from experiments.wildfire_sensitivity import main as screening
+from experiments.wildfire_sensitivity import counterfactual
 from experiments.wildfire_sensitivity.control import split_clean_holdout
 
 
@@ -64,7 +65,7 @@ class RecalibratedEngressorTests(unittest.TestCase):
         y_check = ((np.arange(200) + .75) / 200 - .5).reshape(-1, 1)
         with TemporaryDirectory() as directory, contextlib.redirect_stdout(io.StringIO()):
             path = Path(directory) / "quantiles.json"
-            with patch.object(screening, "EVALUATION_BATCH_SIZE", 50):
+            with patch.object(counterfactual, "EVALUATION_BATCH_SIZE", 50):
                 wrapped = screening.recalibrate_counterfactual(self.base, x, y_fit, path)
             loaded = RecalibratedEngressor.load(self.base, path)
             coverage = screening.interval_coverage(loaded, x, y_check, "check", .90)

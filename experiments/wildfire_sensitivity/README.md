@@ -1,5 +1,52 @@
 # Testing for Sensitive Variables
 
+## Read the code in this order
+
+The question is whether a covariate falls outside its predicted interval more
+often during wildfire conditions than on clean observations. We first require
+the counterfactual model to pass a calibration check on clean control data.
+
+Start at [`main.main()`](main.py). Its candidate loop follows four steps:
+
+1. Fit on **training** rows and reload the best **validation** checkpoint.
+2. Use **recalibration** rows to fit the quantile correction.
+3. Check the corrected model on **control** rows. A failed check leaves the
+   variable undetermined and skips wildfire evaluation.
+4. Compare wildfire and control 95% coverage. A drop above two percentage points
+   means sensitive; otherwise add the variable to the conditioning inputs.
+
+Until-stable mode repeats the remaining candidates only when the input set grew.
+An added variable can therefore affect later candidates in the same round.
+
+| File | Responsibility |
+| --- | --- |
+| [`main.py`](main.py) | CLI, run records, candidate order, screening rounds, classifications |
+| [`settings.py`](settings.py) | Fixed seeds, split fractions, batch sizes, calibration levels, thresholds, starting inputs |
+| [`control.py`](control.py) | `split_screening_data()` builds the four clean sets; block guards and month matching live below it |
+| [`counterfactual.py`](counterfactual.py) | Arrival/trajectory target construction, training, best-checkpoint reload, recalibration fitting |
+| [`evaluation.py`](evaluation.py) | Control calibration checks and wildfire coverage; numerical coverage diagnostics are separate from formatting/plots |
+
+The production split still pools the original clean training/test data and reserves
+**control → recalibration → validation**, leaving the rest for training. Each role
+is shared across candidates. The CLI, seeds, sampling order, checkpoint names,
+JSON/NPZ output fields, and decision rules are unchanged by this refactor.
+The established training/evaluation helpers remain importable through `main.py`;
+their implementations now live in the modules above.
+
+The clarity refactor was checked against the pre-refactor implementation:
+65 existing tests passed; 32 calibration cases and both recalibration target
+modes produced identical values, logs, artifacts, and random-generator states;
+16 complete mocked runs matched in both scopes, both gates, and both screening
+modes. All four production split arrays also matched saved real-data indices.
+An independent agent review found no actionable issues. These checks preserve
+implementation behavior; they do not validate the statistical assumptions.
+
+[`pit_dependence.py`](pit_dependence.py) and
+[`split_feasibility.py`](split_feasibility.py) are separate diagnostics. In
+particular, the recent spaced-recalibration and removed-exclusion-zone comparisons
+have **not** changed production splitting or the AD gate. The dated `HANDOFF.md`
+is historical; use this README and current code for the active pipeline.
+
 ## Motivation
 
 We aim to understand which variables are mediators of wildfire effects. For example, wildfire may impact the temperature covariate, which in turn impacts CCN count.
@@ -133,6 +180,61 @@ or automatically declare independence. These are development diagnostics on the
 rows used to fit the recalibration map, not independent calibration validation;
 no control outcomes are evaluated and no production spacing or gate changes.
 
+To measure a different split **before training**, submit
+`sbatch slurm/recalibration_split_feasibility/run.slurm`. This diagnostic selects
+recalibration points directly from the **full eligible clean pool**, at least
+10 days apart. It compares requested counts 25/50/75/100/150/200/250/300 with
+three local selection seeds. Random greedy selection uses integer month quotas
+matching the wildfire month mix; any shortfall is reported without relaxing the
+spacing. It removes other clean arrivals within 241 hours on either side of
+each selection, then applies the existing blocked control and validation splits
+and control month matching. It also reproduces the current split and computes
+the earliest-first maximum under spacing alone (without month quotas or a
+requirement to leave training data). Outputs account separately for each role,
+guard exclusions, month-matching discards, and any unassigned rows if a split
+cannot finish. JSON/CSV counts and all split indices are saved under
+`weather_checkpoints/recalibration_split_feasibility/<jobid>/`. This CPU job
+loads the data once, fits no models, and does not change production splitting.
+
+To repeat the comparison without the exclusion zone around recalibration
+points, use `sbatch slurm/recalibration_split_feasibility/run_no_recalibration_guard.slurm`.
+It passes `--recalibration-guard-days 0` while retaining the 10-day spacing
+between recalibration points, disjoint row assignments, and the existing
+control/validation block guards. It reuses the full eligible population saved
+by job `3662101` via `--population-from`, avoiding a second trajectory load.
+The current baseline always retains its original splitting rules.
+
+Job `3662101` completed this inventory in 2m45s. All four baseline index arrays
+matched the saved until-stable run `3277702` exactly. The full clean pool has
+54,026 rows; earliest-first retains 296 at a 10-day minimum gap. Guarding those
+296 excludes all other 53,730 rows. With 25 requested, seasonally allocated
+recalibration points, the three selections left 24,052–26,058 training,
+2,696–3,130 validation, and 441–1,465 control rows; recalibration guards alone
+excluded 8,397–8,794. With 50 points these ranges were 21,102–21,984 training,
+2,037–2,838 validation, 76–562 control, and 14,305–15,559 guard exclusions.
+At 75 requested points and above, every tested allocation failed control month
+matching (missing wildfire months in its control pool); requests of 100 or more
+also had greedy selection shortfalls. This is evidence about this allocation
+procedure, not proof that no other split is feasible. Detailed counts and all
+indices are in
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/recalibration_split_feasibility/3662101/`.
+
+The comparison without recalibration exclusion zones (job `3662970`, 14s)
+reused exactly the same population and recalibration selections. All proposed
+splits completed, with no rows excluded by a recalibration guard. At the
+spacing-only maximum of 296 recalibration points, 31,143 rows remained for
+training, 3,575 for validation, and 2,136 for control; 16,876 were excluded by
+the remaining block guards and control month matching. This maximum does not
+enforce month quotas on recalibration. For a seasonally allocated example,
+75 recalibration points with selection seed 2228 left 31,283 training,
+3,589 validation, and 2,154 control rows. Across the three seeds, the 75-point
+counts were 31,283–31,290 training, 3,588–3,592 validation, and 2,145–2,154 control.
+Requests above 75 retained the previous greedy selection shortfalls; removing
+the exclusion zone fixes the downstream allocation failures, not those
+shortfalls. Full counts and indices are under
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/recalibration_split_feasibility/3662970/`.
+Neither inventory changes production splitting or validates calibration.
+
 The wrapper now saves all sorted calibration PIT values in versioned JSON. Its
 linear empirical quantile interpolation preserves existing adjusted boundaries;
 the generalized inverse provides the corrected CDF. For ties, CDF/rank interval
@@ -150,11 +252,12 @@ coverage drop greater than two percentage points. In `until_stable` mode,
 undetermined candidates are retried alongside sensitive candidates when the
 input set grows; the run stops when no candidate is added in a round.
 
-The control lives in [`control.py`](control.py). Two details the ENA data forces:
-trajectories are hourly and overlap by 240 of their 241 hours, so the holdout is
-split off in contiguous blocks of arrival time rather than at random, and each
-holdout block discards its leading 241 hours. Fit rows immediately after a holdout
-block are also purged so their histories cannot reach backwards into the holdout.
+The production split lives in [`control.py`](control.py). Nearby arrivals have
+overlapping history dates and may be dependent. The current conservative rule
+uses contiguous arrival-time blocks, discards each holdout block's leading
+241 hours, and purges nearby fit rows after the block. This is an experimental
+design choice; overlapping dates do not establish identical measurements or
+prove that a full history-length exclusion is necessary.
 
 
 

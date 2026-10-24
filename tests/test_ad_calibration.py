@@ -21,6 +21,7 @@ from experiments.calibration import (
 )
 from experiments.real_metrics import pit_values
 from experiments.wildfire_sensitivity import main as screening
+from experiments.wildfire_sensitivity import evaluation
 
 
 def uniform_model(outputs=1):
@@ -204,7 +205,7 @@ class ADIntegrationTests(unittest.TestCase):
                 ad = dict(accepted=acceptance, valid=True, statistic=1.,
                           p_value=.5 if acceptance else .01, reason="test")
                 with contextlib.redirect_stdout(io.StringIO()), \
-                     patch.object(screening, "ad_block_bootstrap", return_value=ad) as check:
+                     patch.object(evaluation, "ad_block_bootstrap", return_value=ad) as check:
                     result = screening.print_calibration(wrapped, x, y, "control", np.arange(20) * 30.,
                                                          evaluation_scope=scope, calibration_metric="ad")
                 self.assertEqual(result["calibrated"], acceptance)

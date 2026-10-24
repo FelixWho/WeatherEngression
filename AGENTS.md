@@ -119,6 +119,14 @@ Use the non-preadditive models to test robustness when the engression paper's st
 
 ## Communication Style
 
+- The user returns to this project every few days and may have lost the thread.
+  When reporting experiments, briefly recap the question being tested and why
+  it matters, then explain the finding and its practical meaning. Remind them
+  what relevant data sets do; do not assume names like recalibration and control
+  are enough context. Start with a plain-language explanation before detailed
+  tables. Concision must not come at the expense of understanding.
+- Ask a brief clarifying question when competing interpretations would change
+  the experiment or the data pool being used, instead of silently choosing one.
 - Do not be verbose. Concise and intuitive is the priority.
 - Lead with the answer; cut preamble, hedging, and exhaustive option lists.
 - Favor plain intuition over formal walls of text; add detail only when asked.
