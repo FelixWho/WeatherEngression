@@ -1,0 +1,646 @@
+{
+  "runs": {
+    "ad_seasonal_15day": [
+      {
+        "seed": "2027",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2027_3685284.log",
+        "sensitive": [
+          "CO",
+          "RH"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "CFMID": "insensitive",
+          "LWP": "insensitive",
+          "LWC": "insensitive",
+          "CO": "sensitive",
+          "LTS": "undetermined",
+          "PREC": "insensitive",
+          "SWGDN": "insensitive",
+          "PBLH": "insensitive",
+          "T": "insensitive",
+          "CFLOW": "insensitive",
+          "RH": "sensitive",
+          "OMEGA": "insensitive"
+        }
+      },
+      {
+        "seed": "2028",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2028_3685285.log",
+        "sensitive": [
+          "CFMID",
+          "CO"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "RH": "insensitive",
+          "LWP": "insensitive",
+          "LTS": "undetermined",
+          "CFMID": "sensitive",
+          "SWGDN": "insensitive",
+          "PBLH": "insensitive",
+          "PREC": "insensitive",
+          "CO": "sensitive",
+          "OMEGA": "insensitive",
+          "LWC": "insensitive",
+          "CFLOW": "insensitive",
+          "T": "insensitive"
+        }
+      },
+      {
+        "seed": "2029",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2029_3685286.log",
+        "sensitive": [
+          "CO",
+          "LWP",
+          "SWGDN"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "LWC": "insensitive",
+          "SWGDN": "sensitive",
+          "LWP": "sensitive",
+          "RH": "insensitive",
+          "PREC": "insensitive",
+          "T": "insensitive",
+          "PBLH": "insensitive",
+          "OMEGA": "insensitive",
+          "CO": "sensitive",
+          "CFMID": "insensitive",
+          "LTS": "undetermined",
+          "CFLOW": "insensitive"
+        }
+      },
+      {
+        "seed": "2030",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2030_4036572.log",
+        "sensitive": [
+          "CO",
+          "LWP"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "OMEGA": "insensitive",
+          "T": "insensitive",
+          "CO": "sensitive",
+          "LWC": "insensitive",
+          "CFMID": "insensitive",
+          "SWGDN": "insensitive",
+          "RH": "insensitive",
+          "LTS": "undetermined",
+          "LWP": "sensitive",
+          "PREC": "insensitive",
+          "PBLH": "insensitive",
+          "CFLOW": "insensitive"
+        }
+      },
+      {
+        "seed": "2031",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2031_4043606.log",
+        "sensitive": [
+          "CO",
+          "LWP",
+          "PBLH"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "LTS": "undetermined",
+          "PREC": "insensitive",
+          "LWP": "sensitive",
+          "RH": "insensitive",
+          "CFMID": "insensitive",
+          "SWGDN": "insensitive",
+          "CO": "sensitive",
+          "OMEGA": "insensitive",
+          "PBLH": "sensitive",
+          "CFLOW": "insensitive",
+          "T": "insensitive",
+          "LWC": "insensitive"
+        }
+      },
+      {
+        "seed": "2032",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2032_4043609.log",
+        "sensitive": [
+          "CFMID",
+          "CO",
+          "LWP",
+          "SWGDN"
+        ],
+        "undetermined": [
+          "LTS",
+          "T"
+        ],
+        "candidates": {
+          "OMEGA": "insensitive",
+          "LWP": "sensitive",
+          "SWGDN": "sensitive",
+          "PBLH": "insensitive",
+          "CFLOW": "insensitive",
+          "LWC": "insensitive",
+          "RH": "insensitive",
+          "CFMID": "sensitive",
+          "PREC": "insensitive",
+          "LTS": "undetermined",
+          "T": "undetermined",
+          "CO": "sensitive"
+        }
+      },
+      {
+        "seed": "2033",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2033_4226234.log",
+        "sensitive": [
+          "CO",
+          "PBLH",
+          "SWGDN"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "PBLH": "sensitive",
+          "LWC": "insensitive",
+          "CO": "sensitive",
+          "OMEGA": "insensitive",
+          "SWGDN": "sensitive",
+          "RH": "insensitive",
+          "LWP": "insensitive",
+          "PREC": "insensitive",
+          "LTS": "undetermined",
+          "CFMID": "insensitive",
+          "CFLOW": "insensitive",
+          "T": "insensitive"
+        }
+      },
+      {
+        "seed": "2034",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2034_4043684.log",
+        "sensitive": [],
+        "undetermined": [
+          "CO",
+          "LTS"
+        ],
+        "candidates": {
+          "SWGDN": "insensitive",
+          "CFMID": "insensitive",
+          "CFLOW": "insensitive",
+          "LWC": "insensitive",
+          "PBLH": "insensitive",
+          "OMEGA": "insensitive",
+          "T": "insensitive",
+          "RH": "insensitive",
+          "LWP": "insensitive",
+          "CO": "undetermined",
+          "PREC": "insensitive",
+          "LTS": "undetermined"
+        }
+      },
+      {
+        "seed": "2035",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2035_4226288.log",
+        "sensitive": [
+          "CO",
+          "SWGDN"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "SWGDN": "sensitive",
+          "PREC": "insensitive",
+          "PBLH": "insensitive",
+          "OMEGA": "insensitive",
+          "RH": "insensitive",
+          "LWC": "insensitive",
+          "T": "insensitive",
+          "CO": "sensitive",
+          "CFMID": "insensitive",
+          "LWP": "insensitive",
+          "LTS": "undetermined",
+          "CFLOW": "insensitive"
+        }
+      },
+      {
+        "seed": "2036",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2036_4226289.log",
+        "sensitive": [
+          "CFMID",
+          "CO",
+          "LWP",
+          "PBLH",
+          "SWGDN"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "LWC": "insensitive",
+          "SWGDN": "sensitive",
+          "RH": "insensitive",
+          "LTS": "undetermined",
+          "CFMID": "sensitive",
+          "OMEGA": "insensitive",
+          "CO": "sensitive",
+          "T": "insensitive",
+          "LWP": "sensitive",
+          "CFLOW": "insensitive",
+          "PBLH": "sensitive",
+          "PREC": "insensitive"
+        }
+      },
+      {
+        "seed": "2037",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2037_4226290.log",
+        "sensitive": [
+          "CFLOW",
+          "RH",
+          "SWGDN"
+        ],
+        "undetermined": [
+          "CO",
+          "LTS"
+        ],
+        "candidates": {
+          "T": "insensitive",
+          "LWP": "insensitive",
+          "LTS": "undetermined",
+          "LWC": "insensitive",
+          "PBLH": "insensitive",
+          "SWGDN": "sensitive",
+          "PREC": "insensitive",
+          "OMEGA": "insensitive",
+          "CFMID": "insensitive",
+          "CFLOW": "sensitive",
+          "CO": "undetermined",
+          "RH": "sensitive"
+        }
+      },
+      {
+        "seed": "2038",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2038_4226291.log",
+        "sensitive": [
+          "CO"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "CO": "sensitive",
+          "LWC": "insensitive",
+          "T": "insensitive",
+          "LWP": "insensitive",
+          "RH": "insensitive",
+          "PREC": "insensitive",
+          "CFLOW": "insensitive",
+          "CFMID": "insensitive",
+          "PBLH": "insensitive",
+          "LTS": "undetermined",
+          "SWGDN": "insensitive",
+          "OMEGA": "insensitive"
+        }
+      },
+      {
+        "seed": "2039",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2039_4226292.log",
+        "sensitive": [
+          "CO",
+          "LWP",
+          "RH",
+          "SWGDN",
+          "T"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "SWGDN": "sensitive",
+          "PREC": "insensitive",
+          "CFMID": "insensitive",
+          "LWP": "sensitive",
+          "PBLH": "insensitive",
+          "RH": "sensitive",
+          "CFLOW": "insensitive",
+          "LTS": "undetermined",
+          "T": "sensitive",
+          "CO": "sensitive",
+          "OMEGA": "insensitive",
+          "LWC": "insensitive"
+        }
+      },
+      {
+        "seed": "2040",
+        "log": "/home/wg-fhu/WeatherEngression/runs/seasonal_control_trial/slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_seasonal_order_2040_4226293.log",
+        "sensitive": [
+          "CO",
+          "LWP",
+          "T"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "LWC": "insensitive",
+          "PBLH": "insensitive",
+          "RH": "insensitive",
+          "SWGDN": "insensitive",
+          "PREC": "insensitive",
+          "T": "sensitive",
+          "OMEGA": "insensitive",
+          "CFMID": "insensitive",
+          "LWP": "sensitive",
+          "CO": "sensitive",
+          "LTS": "undetermined",
+          "CFLOW": "insensitive"
+        }
+      }
+    ],
+    "coverage_90_95": [
+      {
+        "seed": "original order",
+        "log": "/home/wg-fhu/WeatherEngression/slurm/wildfire_sensitivity/run_until_stable_arrival_3110691.log",
+        "sensitive": [
+          "CO",
+          "T"
+        ],
+        "undetermined": [
+          "LTS",
+          "PREC"
+        ],
+        "candidates": {
+          "PBLH": "insensitive",
+          "CFLOW": "insensitive",
+          "CFMID": "insensitive",
+          "SWGDN": "insensitive",
+          "LWP": "insensitive",
+          "LTS": "undetermined",
+          "OMEGA": "insensitive",
+          "LWC": "insensitive",
+          "RH": "insensitive",
+          "T": "sensitive",
+          "CO": "sensitive",
+          "PREC": "undetermined"
+        }
+      },
+      {
+        "seed": "2028",
+        "log": "/home/wg-fhu/WeatherEngression/slurm/wildfire_sensitivity/run_until_stable_arrival_order_2028_3112708.log",
+        "sensitive": [
+          "CO"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "RH": "insensitive",
+          "LWP": "insensitive",
+          "LTS": "undetermined",
+          "CFMID": "insensitive",
+          "SWGDN": "insensitive",
+          "PBLH": "insensitive",
+          "PREC": "insensitive",
+          "CO": "sensitive",
+          "OMEGA": "insensitive",
+          "LWC": "insensitive",
+          "CFLOW": "insensitive",
+          "T": "insensitive"
+        }
+      },
+      {
+        "seed": "2029",
+        "log": "/home/wg-fhu/WeatherEngression/slurm/wildfire_sensitivity/run_until_stable_arrival_order_2029_3112709.log",
+        "sensitive": [
+          "CO"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "LWC": "insensitive",
+          "SWGDN": "insensitive",
+          "LWP": "insensitive",
+          "RH": "insensitive",
+          "PREC": "insensitive",
+          "T": "insensitive",
+          "PBLH": "insensitive",
+          "OMEGA": "insensitive",
+          "CO": "sensitive",
+          "CFMID": "insensitive",
+          "LTS": "undetermined",
+          "CFLOW": "insensitive"
+        }
+      },
+      {
+        "seed": "2030",
+        "log": "/home/wg-fhu/WeatherEngression/slurm/wildfire_sensitivity/run_until_stable_arrival_order_2030_3147106.log",
+        "sensitive": [
+          "CO",
+          "T"
+        ],
+        "undetermined": [
+          "CFLOW",
+          "LTS",
+          "PBLH"
+        ],
+        "candidates": {
+          "OMEGA": "insensitive",
+          "T": "sensitive",
+          "CO": "sensitive",
+          "LWC": "insensitive",
+          "CFMID": "insensitive",
+          "SWGDN": "insensitive",
+          "RH": "insensitive",
+          "LTS": "undetermined",
+          "LWP": "insensitive",
+          "PREC": "insensitive",
+          "PBLH": "undetermined",
+          "CFLOW": "undetermined"
+        }
+      },
+      {
+        "seed": "2031",
+        "log": "/home/wg-fhu/WeatherEngression/slurm/wildfire_sensitivity/run_until_stable_arrival_order_2031_3147107.log",
+        "sensitive": [
+          "CO"
+        ],
+        "undetermined": [
+          "LTS",
+          "LWC"
+        ],
+        "candidates": {
+          "LTS": "undetermined",
+          "PREC": "insensitive",
+          "LWP": "insensitive",
+          "RH": "insensitive",
+          "CFMID": "insensitive",
+          "SWGDN": "insensitive",
+          "CO": "sensitive",
+          "OMEGA": "insensitive",
+          "PBLH": "insensitive",
+          "CFLOW": "insensitive",
+          "T": "insensitive",
+          "LWC": "undetermined"
+        }
+      },
+      {
+        "seed": "2027",
+        "log": "/home/wg-fhu/WeatherEngression/slurm/wildfire_sensitivity/run_until_stable_arrival_order_3110763.log",
+        "sensitive": [
+          "CO"
+        ],
+        "undetermined": [
+          "LTS"
+        ],
+        "candidates": {
+          "CFMID": "insensitive",
+          "LWP": "insensitive",
+          "LWC": "insensitive",
+          "CO": "sensitive",
+          "LTS": "undetermined",
+          "PREC": "insensitive",
+          "SWGDN": "insensitive",
+          "PBLH": "insensitive",
+          "T": "insensitive",
+          "CFLOW": "insensitive",
+          "RH": "insensitive",
+          "OMEGA": "insensitive"
+        }
+      }
+    ]
+  },
+  "counts": {
+    "ad_seasonal_15day": {
+      "CFLOW": {
+        "sensitive": 1,
+        "undetermined": 0,
+        "either": 1
+      },
+      "CFMID": {
+        "sensitive": 3,
+        "undetermined": 0,
+        "either": 3
+      },
+      "CO": {
+        "sensitive": 12,
+        "undetermined": 2,
+        "either": 14
+      },
+      "LTS": {
+        "sensitive": 0,
+        "undetermined": 14,
+        "either": 14
+      },
+      "LWC": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "LWP": {
+        "sensitive": 7,
+        "undetermined": 0,
+        "either": 7
+      },
+      "OMEGA": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "PBLH": {
+        "sensitive": 3,
+        "undetermined": 0,
+        "either": 3
+      },
+      "PREC": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "RH": {
+        "sensitive": 3,
+        "undetermined": 0,
+        "either": 3
+      },
+      "SWGDN": {
+        "sensitive": 7,
+        "undetermined": 0,
+        "either": 7
+      },
+      "T": {
+        "sensitive": 2,
+        "undetermined": 1,
+        "either": 3
+      }
+    },
+    "coverage_90_95": {
+      "CFLOW": {
+        "sensitive": 0,
+        "undetermined": 1,
+        "either": 1
+      },
+      "CFMID": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "CO": {
+        "sensitive": 6,
+        "undetermined": 0,
+        "either": 6
+      },
+      "LTS": {
+        "sensitive": 0,
+        "undetermined": 6,
+        "either": 6
+      },
+      "LWC": {
+        "sensitive": 0,
+        "undetermined": 1,
+        "either": 1
+      },
+      "LWP": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "OMEGA": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "PBLH": {
+        "sensitive": 0,
+        "undetermined": 1,
+        "either": 1
+      },
+      "PREC": {
+        "sensitive": 0,
+        "undetermined": 1,
+        "either": 1
+      },
+      "RH": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "SWGDN": {
+        "sensitive": 0,
+        "undetermined": 0,
+        "either": 0
+      },
+      "T": {
+        "sensitive": 2,
+        "undetermined": 0,
+        "either": 2
+      }
+    }
+  }
+}

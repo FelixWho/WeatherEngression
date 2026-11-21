@@ -43,9 +43,80 @@ implementation behavior; they do not validate the statistical assumptions.
 
 [`pit_dependence.py`](pit_dependence.py) and
 [`split_feasibility.py`](split_feasibility.py) are separate diagnostics. In
-particular, the recent spaced-recalibration and removed-exclusion-zone comparisons
-have **not** changed production splitting or the AD gate. The dated `HANDOFF.md`
+particular, their comparisons do not alter production settings. The default split
+and AD gate are unchanged; spaced control is now an explicit option described below.
+The dated `HANDOFF.md`
 is historical; use this README and current code for the active pipeline.
+
+## Optional spaced control for sensitivity runs
+
+`--control-gap-days 15` reserves control observations from the **entire eligible
+clean pool**, taking the earliest observation and then the earliest at least
+15 days after each selection. This maximizes the count under spacing alone.
+It does not thin the old control set, match control to wildfire months, or
+exclude nearby rows from fitting. Control rows themselves are removed before
+recalibration and validation are split, so all roles remain disjoint.
+Recalibration stays month-matched and its existing block guards remain, as do
+the validation guards. The default, `--control-gap-days 0`, retains the original
+blocked, month-matched control split exactly.
+
+The same spaced control supplies **corrected PIT for AD and clean 95% coverage**.
+The AD bootstrap, rejection threshold, quantile correction, and sensitivity rule
+are unchanged. Thus these runs investigate a different clean reference population;
+seasonal composition and remaining dependence still affect interpretation.
+
+The runner was checked against the saved inventory: at 15 days, every role's row
+indices match `control_split_feasibility/3663781/gap_15/earliest_first_maximum.npz`.
+
+| Training | Validation | Recalibration | Control | Wildfire evaluation |
+| ---: | ---: | ---: | ---: | ---: |
+| 33,247 | 3,868 | 1,754 | 201 | 6,786 |
+
+The controls occupy 107 populated 30-day AD blocks. Of 54,026 eligible clean rows,
+14,956 are excluded by the remaining split guards and recalibration month matching.
+Spacing and counts do not establish reliable AD p-values.
+
+Three launchers, `slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_order_{2027,2028,2029}.slurm`,
+use arrival targets, AD, until-stable screening, and four-hour GPU limits.
+Only candidate order varies across runs; data/training seeds stay 2026 and the
+local AD bootstrap seed stays 2430. The shared runner accepts `CONTROL_GAP_DAYS`.
+Checkpoints go into separate `ad_control15_arrival_order_<seed>/<job>/arrival/`
+directories. `screening_split.npz` stores the selected rows; `screening_split.json`
+stores split settings, counts, and seeds. Split settings and counts are also
+included in `screening_order.json` and every candidate's calibration JSON.
+
+Submitted on 2026-10-25: jobs **3685219 / 3685220 / 3685221**, corresponding to
+order seeds **2027 / 2028 / 2029**. The user selected the 201-point control
+configuration without seasonal matching. All 79 small tests passed before
+submission, including both target scopes, both calibration gates, split disjointness,
+default-split preservation, and the three launcher configurations. Test mocks were
+updated to target the training/evaluation helpers currently defined in `main.py`.
+
+Six additional runs without control month matching were submitted on 2026-10-29,
+using candidate-order seeds 2035–2040. They keep the same 201 controls, 15-day
+spacing, arrival targets, AD settings, until-stable screening, and four-hour GPU
+limits. The new launchers explicitly select this checkout and separate
+`ad_control15_arrival_order_<seed>/<job>/` checkpoint directories, so they cannot
+inherit the seasonal trial's checkout or output path.
+
+| Order seed | Job ID |
+|---|---|
+| 2035 | 4226425 |
+| 2036 | 4226426 |
+| 2037 | 4226427 |
+| 2038 | 4226428 |
+| 2039 | 4226429 |
+| 2040 | 4226430 |
+
+All six returned job IDs and were verified pending in `squeue` after submission.
+Launcher shell syntax and settings were checked; the existing pipeline code was
+unchanged and matched the source snapshot from the original 201-control runs.
+
+On 2026-10-30, accounting confirmed seeds 2036–2040 completed in 53–68 minutes.
+Seed 2035's job 4226425 timed out after four hours on c2-gpu-010: its log stopped
+before split/training output and it wrote no checkpoint directory. The same
+launcher was resubmitted as **4246525**, excluding that node for this retry;
+the scientific settings and four-hour limit are unchanged.
 
 ## Motivation
 
@@ -180,6 +251,54 @@ or automatically declare independence. These are development diagnostics on the
 rows used to fit the recalibration map, not independent calibration validation;
 no control outcomes are evaluated and no production spacing or gate changes.
 
+For dependence on the **held-out control rows used by AD**, submit
+`sbatch slurm/control_pit_dependence/run.slurm` (job `3664159`). The shared
+diagnostic now accepts `--role control` and explicit `--gap-days`; the original
+recalibration default remains available. This job reloads the same 36 latest
+arrival checkpoints from the three until-stable AD runs and their existing
+recalibration mappings. It evaluates each model on its original 2,159 clean
+control rows, checking disjointness from training, validation, recalibration,
+and wildfire. Mapping size is checked against the 1,350 recalibration rows,
+independently of the number of control observations. No model or mapping is fitted.
+
+It measures corrected/raw PIT rank and Pearson correlations, plus lower/upper
+5% event correlations, at elapsed lags 1/3/7/10/15/20/30/60/90 days (±0.5-day
+bins). The adjacent-observation view also reports the actual gaps and counts
+remaining after thinning these saved controls. Raw PIT, corrected PIT, timestamps,
+row IDs, checkpoints, seeds, pair counts, and unique-row counts are retained under
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/control_pit_dependence/3664159/`.
+The GPU job loads trajectories once and has a two-hour limit. Eight small tests
+pass, including an end-to-end control selection check with different control
+and recalibration counts. Control outcomes were previously used by screening;
+this is a descriptive dependence diagnostic, not a new independent validation
+set or proof that any gap makes observations independent.
+
+For the **76-control seasonal runs**, job **4229123** was submitted on 2026-10-29
+with `slurm/control_pit_dependence/run_seasonal76.slurm`. It reloads the latest
+12 candidate models from each of the seven completed order seeds
+2027–2032 and 2034 (84 models), retaining their saved feature orders and mappings.
+The existing diagnostic samples 400 fresh draws on each model's saved controls;
+no model or recalibration mapping is fitted.
+
+`compare_pit_dependence.py` then compares corrected-PIT Spearman correlations
+with the five known-uniform scenarios from the AD audit, using the exact same
+dates and pairs. At 15/30/60/90 days (±0.5 days), there are 43/34/15/9 pairs.
+Each scenario has 1,000 simulations, seed 2435. Its 2.5th/50th/97.5th percentiles
+are saved alongside each model's observed correlation and pair counts. These
+are pointwise simulated ranges, not confidence intervals for true dependence
+or a fitted decay time. The 84 models share observations; they are not 84
+independent datasets. Sparse pairs and PIT ties are reported, not filtered away.
+
+The job requests one GPU for two hours on `compute2-myu`. PIT arrays, inference
+seeds, and the model manifest are saved in
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/control_pit_dependence/4229123/`;
+`synthetic_comparison/` contains `comparison.csv`, `settings.json`, and the
+simulated correlations. All 20 dependence/comparison/audit tests passed.
+
+Job **4229123** completed successfully in **3m07s**, confirmed by accounting on
+2026-10-30. Its manifest contains all 84 models and the synthetic comparison
+finished and saved its CSV, settings, and reference arrays.
+
 To measure a different split **before training**, submit
 `sbatch slurm/recalibration_split_feasibility/run.slurm`. This diagnostic selects
 recalibration points directly from the **full eligible clean pool**, at least
@@ -234,6 +353,171 @@ the exclusion zone fixes the downstream allocation failures, not those
 shortfalls. Full counts and indices are under
 `/storage3/fs1/myu/Active/felixhu/weather_checkpoints/recalibration_split_feasibility/3662970/`.
 Neither inventory changes production splitting or validates calibration.
+
+The follow-up comparison targets **control**, whose PIT values are used by AD,
+rather than recalibration, which fits the correction. Submit
+`sbatch slurm/control_split_feasibility/run.slurm` to select control rows from
+the full clean pool at least 10 days apart, without excluding nearby rows from
+other roles. Recalibration and validation then use their existing blocked splits;
+recalibration remains month-matched and is not thinned. This is a count diagnostic
+only; production splitting and the AD test are unchanged.
+
+Job `3663360` completed in 14s using the cached population. Counts were:
+
+| Clean-data role | Current split | 75 spaced control rows | Maximum 296 spaced control rows |
+| --- | ---: | ---: | ---: |
+| Training | 23,564 | 33,343 | 33,187 |
+| Validation | 3,110 | 3,877 | 3,864 |
+| Recalibration | 1,350 | 1,750 | 1,750 |
+| Control | 2,159 | 75 | 296 |
+| Excluded | 23,843 | 14,981 | 14,929 |
+
+Each column accounts for all 54,026 clean rows; 6,786 wildfire rows are separate.
+The 75-row example uses selection seed 2228 and rounded wildfire-month quotas;
+all three seeds achieved this count. The 296-row maximum uses earliest-first
+selection without month quotas. Requests of 100–300 with month quotas retained
+91–132 rows depending on requested count and seed; these greedy shortfalls do
+not establish the maximum under seasonal matching. Remaining exclusions come
+from recalibration/validation block guards and recalibration month matching.
+Counts alone do not establish PIT independence or reliable AD p-values.
+All settings, seeds, counts, and split indices are saved under
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/control_split_feasibility/3663360/`.
+
+To test whether this control spacing helps AD, use the separate audit
+`experiments/validate_ad_control_spacing.py`, submitted through
+`sbatch slurm/ad_control_spacing_validation/run.slurm` (array `3663625`). It uses
+the saved real observation dates and compares current control (2,159 rows),
+75 spaced rows, and the spacing-only maximum (296 rows). Each spaced selection
+has a random, unspaced comparator with exactly the same count in each month.
+Selections are fixed before simulation; each trial uses the same synthetic PIT
+process across all five selections. No trajectories, models, or outcomes are
+loaded, and production screening is unchanged.
+
+The synthetic process has exactly uniform marginal PIT under the null. A
+stationary Gaussian component has correlation $\exp(-|\Delta t|/\tau)$; adding
+independent Gaussian noise gives latent covariance
+$\rho\exp(-|\Delta t|/\tau)$ between distinct observations. Applying the normal
+CDF gives uniform PIT. The five null cases are independent values, moderate
+dependence ($\rho=0.3$, $\tau=3$ days), and strong dependence ($\rho=0.8$,
+$\tau=3,10,30$ days). Two alternatives use $0.1+0.8U$ (independent and strong
+10-day dependence) to assess detection of overly wide predictions. These are
+stress-test assumptions, not dependence estimates fitted to ENA data.
+
+Each scenario runs 1,000 trials. It calls the unchanged production block AD
+bootstrap (30-day blocks, 2,000 replicates, minimum 10 blocks, rejection below
+0.05) and separately reports the IID AD reference (20,000 null simulations per
+sample size). Inspect false-rejection rates and 95% binomial intervals under
+the null, and detection rates under the alternatives. The 75/296 comparisons
+do not by themselves pick a production control count. This audit excludes
+recalibration-fit uncertainty and finite predictive sampling error.
+
+Simulation seed 2433, comparator-selection seed 2434, seed derivations, input
+indices, all p-values, invalid reasons, and CSV summaries are saved under
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/ad_control_spacing_validation/3663625/<scenario>/`.
+Partial results are saved every 100 trials. The array runs at most three CPU
+tasks at once, with a one-hour limit per task.
+
+All seven tasks completed successfully in 1m55s–2m02s each. For the **current
+block-bootstrap AD procedure**, the false-rejection percentages were:
+
+| Synthetic dependence | Current 2,159 | Random 75 | Spaced 75 | Spaced 296 |
+| --- | ---: | ---: | ---: | ---: |
+| Independent | 7.3% | 6.4% | 5.4% | 6.5% |
+| Moderate, 3-day decay | 11.1% | 6.4% | 6.1% | 4.8% |
+| Strong, 3-day decay | 13.8% | 7.2% | 5.3% | 5.8% |
+| Strong, 10-day decay | 15.6% | 9.4% | 7.8% | 7.5% |
+| Strong, 30-day decay | 21.3% | 14.3% | 13.8% | 20.4% |
+
+The target is 5%. Spacing performs well in the short-dependence cases, but does
+not resolve the longer-dependence failures. For spaced 75, the 95% intervals
+are 6.2–9.6% in the strong 10-day case and 11.7–16.1% in the strong 30-day case.
+Random 75 also improves over the current selection, so changes in count and
+calendar spread contribute to the improvement. The 296-row maximum remains
+unmatched to wildfire seasonality and is not a chosen production split.
+
+Detection of the specified overly wide alternative was 92.9% with independent
+PIT and 88.7% with strong 10-day dependence for spaced 75, and 100% in both
+cases for spaced 296. The separate IID test on spaced 75 had false-rejection
+rates 4.7/5.2/4.6/8.7/19.6% in the five table scenarios, and detection rates
+63.9/66.9%. It also fails to control false rejections under longer dependence.
+All 70,000 p-values were valid, selection arrays matched across tasks, and
+comparator month counts matched their spaced partners. Full intervals and
+both methods' results are in the per-scenario JSON/CSV files. These simulations
+do not justify treating 10-day spacing as a complete fix for the real-data AD
+gate; no production split or calibration method was changed by this audit.
+
+The 15/20-day follow-up uses `slurm/control_split_feasibility/run_wider_gaps.slurm`
+for counts and `slurm/ad_control_spacing_validation/run_wider_gaps.slurm` for AD.
+The final count inventory is `3663781`: with the same seasonal selection seed
+2228, all gaps complete 45 points, but 20 days retains only 48 of 50 requested.
+Requests for 75 retain 75/65/55 at 10/15/20 days. These are greedy-selection
+outcomes, not maximum counts under seasonal quotas. Under spacing alone,
+the maximum counts are 296/201/153.
+
+Audit array `3663788` pairs all three gaps in each of the same seven scenarios,
+with 1,000 trials per scenario and the same AD methods, settings, and seeds.
+It compares a fixed seasonal count of **45 at each gap**, each gap's maximum,
+and equal-count/month random comparators, keeping one current-control baseline.
+This reruns the 10-day baseline in the joint comparison; adding observation
+dates changes the individual simulated realizations relative to `3663625`.
+Each trial now shares one realization across all gaps. The common seasonal
+count was chosen from timestamp-only feasibility checks, before any new PIT
+results. No production split, AD gate, or fitted model changes.
+
+The audit accepts multiple `--inventory` paths and a `--seasonal-count`; its
+original single-inventory, 75-point default remains available. It rejects
+incomplete seasonal selections, mismatched source calendars or current controls,
+and duplicate gaps. Seven small audit tests pass, including paired PIT reuse
+and multiple-inventory checks. Results, indices, and seed rules are saved under
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/ad_control_spacing_validation/3663788/<scenario>/`.
+
+All seven follow-up tasks completed in 4m48s–5m09s. With **45 seasonal points
+at every gap**, the current block-bootstrap AD false-rejection rates were:
+
+| Synthetic dependence | 10-day spacing | 15-day spacing | 20-day spacing |
+| --- | ---: | ---: | ---: |
+| Independent | 5.9% | 5.8% | 4.7% |
+| Moderate, 3-day decay | 5.8% | 5.9% | 5.3% |
+| Strong, 3-day decay | 6.2% | 4.9% | 4.5% |
+| Strong, 10-day decay | 6.9% | 7.7% | 6.9% |
+| Strong, 30-day decay | 12.0% | 12.0% | 11.0% |
+
+The target remains 5%. Wider gaps do not resolve the longer-dependence problem:
+the 20-day, strong 30-day case has a 95% interval of 9.1–13.1%. At the respective
+maximum counts 296/201/153, the strong 30-day false-rejection rates are
+20.7/18.9/17.4%, while the strong 10-day rates are 8.3/8.0/6.8%. These maximum
+comparisons change both count and spacing, and do not enforce wildfire seasonality.
+
+For the specified overly wide alternative, block AD detection at 45 points is
+59.0/57.7/56.8% under independence and 57.6/57.5/59.7% with strong 10-day dependence
+(ordered 10/15/20-day spacing). All maximum-size selections detect it in 100% of
+trials. The separate IID-reference test also over-rejects under strong 30-day
+dependence: 15.1/14.2/10.9% at 45 points and 37.9/27.0/22.0% at the maxima. Its
+detection rates at 45 points are only 15.7–20.5% across these alternatives.
+Thus 15/20-day spacing is not a general solution in the simulated conditions.
+All 182,000 p-values were valid; selection arrays matched across scenarios,
+and the three seasonal random comparators used exactly the same rows.
+
+On 2026-10-29, array **4227288** was submitted with
+`slurm/ad_control_spacing_validation/run_seasonal76.slurm` to audit the exact
+**76 season-matched controls** used by sensitivity run **3685284** (order seed
+2027). The audit's new `--control-split` option reads those saved rows directly;
+the cached calendar supplies their dates. No new selection is made. The controls
+retain their 15-day minimum spacing and 51 populated 30-day blocks.
+
+The seven existing scenarios each run 1,000 trials: five known-uniform cases
+measure false rejections and two overly wide cases measure detection. Production
+AD uses 2,000 bootstrap replicates and alpha 0.05; audit seed 2433 and per-trial
+seed rules are saved. Read the `block_bootstrap` summary rows for the production
+test; `iid_reference` remains a separate diagnostic. Dependence strengths are
+assumed scenarios, not fitted estimates. This audit uses exact synthetic PIT,
+without model fitting, predictive sampling error, or recalibration fitting.
+
+The CPU array runs at most three tasks at once, with 20 minutes per task.
+Results, rejection-rate intervals, and the exact row IDs/dates are saved under
+`/storage3/fs1/myu/Active/felixhu/weather_checkpoints/ad_control_spacing_validation/4227288/<scenario>/`.
+All 27 audit/AD tests and a tiny CLI check passed; the production AD source is
+identical to the seasonal checkout's. The sensitivity pipeline was not changed.
 
 The wrapper now saves all sorted calibration PIT values in versioned JSON. Its
 linear empirical quantile interpolation preserves existing adjusted boundaries;
@@ -313,3 +597,33 @@ holdout and month-matching seeds, validation seed, PIT base seed, and candidate
 order seed (`null` means original order). It also records the PIT batch seed rule,
 batch sizes, and predictive draw count. Predictive draws continue the Torch RNG
 stream after training; they do not use an independently reset sampling seed.
+
+## Additional AD and coverage order runs: submitted 2026-10-30
+
+The user requested six more runs with the latest season-matched AD design and
+ten more with the original 90%/95% coverage design. All use arrival-only targets,
+until-stable screening, unchanged training/split seeds, and four-hour single-GPU
+allocations on `compute2-myu`.
+
+| Calibration check | Additional runs | Candidate-order seeds | Clean control |
+|---|---:|---|---|
+| AD, alpha 0.05 | 6 | 2041–2046 | 76 season-matched rows, at least 15 days apart |
+| Central 90% and 95%, each within 3 block SE | 10 | 2032–2041 | Original 2,159-row blocked, season-matched control; no spacing constraint |
+
+AD runs use `runs/seasonal_control_trial` and its existing
+`run_until_stable_arrival_ad_control15_seasonal_order_<seed>.slurm` naming.
+Coverage runs use this checkout and new
+`run_until_stable_arrival_coverage90_95_order_<seed>.slurm` launchers.
+Checkpoints are isolated by metric, order seed, and job ID. Experiment source
+code is unchanged. After cancellation, all 16 jobs were resubmitted with these
+original configurations at the user's request: AD jobs 4247550–4247555 and
+coverage jobs 4247556–4247565. The two groups intentionally retain their different
+historical control splits. The temporary coverage jobs using 15-day spacing were
+canceled and are not part of this experiment.
+
+The [submission manifest](../../slurm/wildfire_sensitivity/additional_ad_and_coverage_2026-10-30.json)
+records the current 16 job IDs, launchers, log/checkpoint paths, settings, and
+source hashes; canceled attempts remain under `superseded_runs`.
+All launchers passed shell syntax and intercepted-environment checks before
+submission. These additions bring the planned totals to 20 season-matched AD
+runs and 16 coverage runs, counting the completed original-order coverage run.

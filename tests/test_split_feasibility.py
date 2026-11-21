@@ -4,13 +4,56 @@ import unittest
 
 import numpy as np
 
-from experiments.wildfire_sensitivity.control import _months
+from experiments.wildfire_sensitivity.control import _months, split_screening_data
 from experiments.wildfire_sensitivity.split_feasibility import (
     earliest_spaced, month_quotas, purge_near_selected, select_spaced, split_inventory,
 )
 
 
 class SplitFeasibilityTests(unittest.TestCase):
+    def test_production_split_matches_inventory_with_and_without_spacing(self):
+        times = 737791. + np.arange(1965)
+        clean, wildfire = np.arange(1600), np.arange(1600, 1965)
+        settings = dict(block_days=30, control_fraction=.25, recalibration_fraction=.2,
+                        validation_fraction=.15, control_seed=2026, recalibration_seed=2228,
+                        validation_seed=2127, control_guard_days=0)
+        seeds = dict(control_split=2026, control_month_matching=2026,
+                     recalibration_split=2228, recalibration_month_matching=2228,
+                     validation_split=2127)
+        state = np.random.get_state()
+        for gap in [0, 10, 15, 20]:
+            selected = earliest_spaced(clean, times, gap) if gap else None
+            counts, expected = split_inventory(clean, wildfire, times, 241, settings,
+                                               control=selected)
+            self.assertEqual(counts['status'], 'ok')
+            actual = split_screening_data(
+                clean, wildfire, times, window_hours=241, control_fraction=.25,
+                recalibration_fraction=.2, validation_fraction=.15, block_days=30,
+                seeds=seeds, control_gap_days=gap,
+            )
+            for role in ['train', 'validation', 'recalibration', 'control']:
+                np.testing.assert_array_equal(actual[role], expected[role])
+            np.testing.assert_array_equal(actual['wildfire'], wildfire)
+            rows = np.concatenate(list(actual.values()))
+            self.assertEqual(len(rows), len(np.unique(rows)))
+            if gap:
+                self.assertGreaterEqual(np.diff(times[actual['control']]).min(), gap)
+                # Control's neighbouring rows remain eligible for training.
+                distances = abs(times[actual['train']][:, None] - times[selected][None, :])
+                self.assertLess(distances.min(), 241 / 24)
+        after = np.random.get_state()
+        np.testing.assert_array_equal(state[1], after[1])
+        self.assertEqual(state[2:], after[2:])
+
+    def test_production_rejects_invalid_spacing(self):
+        for gap in [-1, np.nan, np.inf]:
+            with self.subTest(gap=gap), self.assertRaisesRegex(ValueError, 'control_gap_days'):
+                split_screening_data(
+                    np.arange(2), np.array([2]), np.arange(3.), window_hours=241,
+                    control_fraction=.25, recalibration_fraction=.2, validation_fraction=.15,
+                    block_days=30, seeds={}, control_gap_days=gap,
+                )
+
     def test_earliest_maximum_matches_exhaustive_search(self):
         times = np.array([15., 0., 8., 10., 20., 20., 29., 40.])
         rows = np.arange(len(times))
@@ -111,6 +154,28 @@ class SplitFeasibilityTests(unittest.TestCase):
         self.assertEqual(counts['status'], 'invalid')
         self.assertTrue(counts['reason'])
         np.testing.assert_array_equal(np.sort(np.concatenate(list(subsets.values()))), clean)
+
+    def test_spacing_applies_to_control_and_recalibration_remains_dense(self):
+        times = 737791. + np.arange(1965)
+        clean, wildfire = np.arange(1600), np.arange(1600, 1965)
+        settings = dict(block_days=30, control_fraction=.25, recalibration_fraction=.2,
+                        validation_fraction=.15, control_seed=2026, recalibration_seed=2228,
+                        validation_seed=2127, control_guard_days=0)
+        selected = earliest_spaced(clean, times, 10)
+        counts, subsets = split_inventory(clean, wildfire, times, 241, settings, control=selected)
+        self.assertEqual(counts['status'], 'ok', counts['reason'])
+        np.testing.assert_array_equal(subsets['control'], selected)
+        self.assertGreaterEqual(np.diff(np.sort(times[subsets['control']])).min(), 10)
+        self.assertLess(np.diff(np.sort(times[subsets['recalibration']])).min(), 10)
+        self.assertEqual(counts['control_guard'], 0)
+        self.assertEqual(counts['after_control_guard'], len(clean) - len(selected))
+        np.testing.assert_array_equal(np.sort(np.concatenate(list(subsets.values()))), clean)
+        for role in ['train', 'validation', 'recalibration']:
+            self.assertEqual(len(np.intersect1d(subsets[role], selected)), 0)
+            distances = abs(times[subsets[role]][:, None] - times[selected][None, :])
+            self.assertLess(distances.min(), 10)
+        with self.assertRaisesRegex(ValueError, 'only one spaced role'):
+            split_inventory(clean, wildfire, times, 241, settings, selected, control=selected)
 
 
 if __name__ == '__main__':

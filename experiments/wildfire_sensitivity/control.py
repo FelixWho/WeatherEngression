@@ -1,9 +1,10 @@
 """Production data splitting for wildfire-sensitivity screening.
 
 Start at split_screening_data(): control, then recalibration, then validation;
-the remaining rows train the models. The low-level block splitter and seasonal
-subsampler below implement those steps. Spaced-point alternatives are separate
-diagnostics in split_feasibility.py and do not change this production split.
+the remaining rows train the models. By default, control uses guarded blocks
+and seasonal matching. Positive control_gap_days instead selects the maximum
+earliest-first spaced control from the full clean pool, without month matching
+or excluding neighbouring rows. Recalibration and validation keep their guards.
 
 The screening asks whether a candidate covariate's wildfire-period values fall
 outside what a clean-trained model predicts. Comparing that coverage against the
@@ -16,7 +17,7 @@ the model never trained on, drawn to match the wildfire group's month
 distribution. Coverage on that control is what wildfire coverage gets compared
 against. Month matching does not guarantee equal model error in the two groups.
 
-Two choices made by the current experiment:
+Two choices made by the default split:
 
 - **Time-blocked split.** Nearby arrivals have overlapping history dates and
   may be dependent. The current conservative rule selects whole arrival-time
@@ -36,23 +37,31 @@ HOURS_PER_DAY = 24.0
 
 def split_screening_data(
     clean_index, wildfire_index, time_days, *, window_hours, control_fraction,
-    recalibration_fraction, validation_fraction, block_days, seeds,
+    recalibration_fraction, validation_fraction, block_days, seeds, control_gap_days=0.0,
 ) -> dict[str, np.ndarray]:
     """Build the four clean roles once; every candidate uses these same rows.
 
     Training fits weights, validation selects the checkpoint, recalibration fits
     the quantile correction, and control checks it and supplies the clean coverage
-    baseline. Only control/recalibration are seasonally matched to wildfire.
+    baseline. Recalibration is always seasonally matched; control is matched only
+    in the default blocked split. Spaced controls remain disjoint from every fit
+    role, but their histories may overlap those of nearby fitting observations.
     The caller pools the original paper-train and paper-test clean observations.
     """
-    fit, control_pool = split_clean_holdout(
-        clean_index, time_days, window_hours=window_hours,
-        holdout_fraction=control_fraction, block_days=block_days,
-        seed=seeds["control_split"],
-    )
-    control = month_matched_subsample(
-        control_pool, wildfire_index, time_days, seed=seeds["control_month_matching"],
-    )
+    if not np.isfinite(control_gap_days) or control_gap_days < 0:
+        raise ValueError("control_gap_days must be finite and nonnegative")
+    if control_gap_days > 0:
+        control = earliest_spaced(clean_index, time_days, control_gap_days)
+        fit = np.setdiff1d(clean_index, control)
+    else:
+        fit, control_pool = split_clean_holdout(
+            clean_index, time_days, window_hours=window_hours,
+            holdout_fraction=control_fraction, block_days=block_days,
+            seed=seeds["control_split"],
+        )
+        control = month_matched_subsample(
+            control_pool, wildfire_index, time_days, seed=seeds["control_month_matching"],
+        )
     fit, recalibration_pool = split_clean_holdout(
         fit, time_days, window_hours=window_hours,
         holdout_fraction=recalibration_fraction, block_days=block_days,
@@ -69,6 +78,25 @@ def split_screening_data(
     )
     return dict(train=train, validation=validation, recalibration=recalibration,
                 control=control, wildfire=wildfire_index)
+
+
+def earliest_spaced(clean, times, gap_days):
+    """Maximum count under spacing alone; select by time, never by outcomes.
+
+    Equal-time ties retain their input order. Returned indices are chronological.
+    This same selector is used by the split-count diagnostic.
+    """
+    if not np.isfinite(gap_days) or gap_days <= 0:
+        raise ValueError("gap_days must be positive and finite")
+    clean = np.asarray(clean, dtype=np.int64)
+    times = np.asarray(times, dtype=float)
+    if clean.ndim != 1 or times.ndim != 1 or not np.isfinite(times[clean]).all():
+        raise ValueError("require row indices and finite timestamps")
+    selected = []
+    for row in clean[np.argsort(times[clean], kind="stable")]:
+        if not selected or times[row] - times[selected[-1]] >= gap_days:
+            selected.append(row)
+    return np.asarray(selected, dtype=np.int64)
 
 
 def time_blocks(time_days: np.ndarray, block_days: float) -> np.ndarray:

@@ -13,7 +13,7 @@ import numpy as np
 import torch
 
 from experiments.wildfire_sensitivity import main as screening
-from experiments.wildfire_sensitivity import control, evaluation
+from experiments.wildfire_sensitivity import control
 
 
 class CalibrationAcceptanceTests(unittest.TestCase):
@@ -32,7 +32,7 @@ class CalibrationAcceptanceTests(unittest.TestCase):
                 len(x), y.shape[1], sample_size
             ),
         )
-        with patch.object(evaluation, "pit_values", side_effect=lambda samples, y, seed: y):
+        with patch.object(screening, "pit_values", side_effect=lambda samples, y, seed: y):
             with contextlib.redirect_stdout(io.StringIO()):
                 return screening.print_calibration(
                     model, x, y, "test", times, evaluation_scope=scope
@@ -71,7 +71,8 @@ class CalibrationAcceptanceTests(unittest.TestCase):
 
 class ScreeningGateTests(unittest.TestCase):
     def run_screening(self, acceptance, mode, scope="trajectory", control_coverage=.95,
-                      wildfire_coverages=None, candidate_order_seed=None, calibration_metric="coverage"):
+                      wildfire_coverages=None, candidate_order_seed=None, calibration_metric="coverage",
+                      control_gap_days=0):
         names = (
             "P", "LAND", "SLP", "WS", "TS", "DUST^(1/5)", "EPV",
             "CHL^(1/2)", "DMS^(1/2)", "SO2EM^(1/5)", "CO^(1/5)", "LWP^(1/5)",
@@ -128,25 +129,35 @@ class ScreeningGateTests(unittest.TestCase):
             for name, replacement in {
                 "ALL_COVARIATE_NAMES": names,
                 "load_wildfire_arms": Mock(return_value=(dataset, arms)),
-                "split_clean_holdout": Mock(side_effect=[
+                "split_clean_holdout": Mock(side_effect=([
                     (np.arange(6), np.array([6, 7])),
+                ] if not control_gap_days else []) + [
                     (np.arange(4), np.array([4, 5])),
                     (np.arange(2), np.array([2, 3])),
                 ]),
+                "earliest_spaced": Mock(return_value=np.array([6, 7])),
                 "month_matched_subsample": Mock(side_effect=lambda pool, *args, **kwargs: pool),
                 "train_counterfactual": fit,
                 "recalibrate_counterfactual": Mock(side_effect=recalibrate),
                 "print_calibration": calibration,
                 "interval_coverage": intervals,
             }.items():
-                owner = control if name in ("split_clean_holdout", "month_matched_subsample") else screening
+                owner = control if name in ("split_clean_holdout", "month_matched_subsample", "earliest_spaced") else screening
                 stack.enter_context(patch.object(owner, name, replacement))
             stack.enter_context(contextlib.redirect_stdout(output))
             screening.main(mode, "unused.mat", Path(directory), evaluation_scope=scope,
-                           candidate_order_seed=candidate_order_seed, calibration_metric=calibration_metric)
+                           candidate_order_seed=candidate_order_seed, calibration_metric=calibration_metric,
+                           control_gap_days=control_gap_days)
             self.assertEqual(screening.load_wildfire_arms.call_args.kwargs["seed"], 2026)
             self.assertEqual([call.kwargs["seed"] for call in control.split_clean_holdout.call_args_list],
-                             [2026, 2228, 2127])
+                             [2228, 2127] if control_gap_days else [2026, 2228, 2127])
+            if control_gap_days:
+                control.earliest_spaced.assert_called_once()
+                np.testing.assert_array_equal(control.earliest_spaced.call_args.args[0], np.arange(8))
+                self.assertEqual(control.earliest_spaced.call_args.args[2], control_gap_days)
+                np.testing.assert_array_equal(control.split_clean_holdout.call_args_list[0].args[0], np.arange(6))
+            else:
+                control.earliest_spaced.assert_not_called()
             artifacts = Path(directory) / "arrival" if scope == "arrival" else Path(directory)
             order = json.loads((artifacts / "screening_order.json").read_text())
             self.assertEqual(order["candidate_order_seed"], candidate_order_seed)
@@ -160,14 +171,25 @@ class ScreeningGateTests(unittest.TestCase):
             }
             if calibration_metric == "ad":
                 expected_seeds["ad_bootstrap"] = 2430
+            if control_gap_days:
+                expected_seeds["control_split"] = None
+                expected_seeds["control_month_matching"] = None
             self.assertEqual(order["seeds"], expected_seeds)
             self.assertEqual(order["calibration_settings"]["metric"], calibration_metric)
+            split_record = json.loads((artifacts / "screening_split.json").read_text())
+            self.assertEqual(split_record['settings'], order['split_settings'])
+            self.assertEqual(split_record['counts'], order['split_counts'])
+            self.assertEqual(split_record['settings']['control_gap_days'], control_gap_days)
+            self.assertEqual(split_record['settings']['control_month_matched'], not bool(control_gap_days))
+            self.assertEqual(split_record['counts']['control'], 2)
             candidate_files = list(artifacts.glob("round_*/*_calibration.json"))
             self.assertEqual(len(candidate_files), fit.call_count)
             for path in candidate_files:
                 record = json.loads(path.read_text())
                 self.assertEqual(record["seeds"], expected_seeds)
                 self.assertEqual(record["calibration_settings"]["metric"], calibration_metric)
+                self.assertEqual(record['split_settings'], split_record['settings'])
+                self.assertEqual(record['split_counts'], split_record['counts'])
                 self.assertIn("calibrated", record["metrics"])
             for name, seed in expected_seeds.items():
                 self.assertIn(f"  {name}: {seed}\n", output.getvalue())
@@ -185,6 +207,18 @@ class ScreeningGateTests(unittest.TestCase):
                 }.items():
                     np.testing.assert_array_equal(splits[role], expected)
         return fit, intervals, output.getvalue()
+
+    def test_spaced_control_reaches_both_gates_and_target_scopes(self):
+        for scope in ['arrival', 'trajectory']:
+            for metric in ['ad', 'coverage']:
+                with self.subTest(scope=scope, metric=metric):
+                    _, intervals, output = self.run_screening(
+                        lambda model: True, 'until_stable', scope,
+                        calibration_metric=metric, control_gap_days=15,
+                    )
+                    self.assertGreater(intervals.call_count, 0)
+                    self.assertIn('minimum 15 days apart', output)
+                    self.assertIn('no month matching or surrounding guard', output)
 
     def test_ad_mode_propagates_and_retries_undetermined_in_both_scopes(self):
         for scope in ["arrival", "trajectory"]:

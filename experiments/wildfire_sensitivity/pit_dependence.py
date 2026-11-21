@@ -1,9 +1,10 @@
-"""Descriptive PIT dependence on saved clean recalibration rows, via SLURM.
+"""Descriptive PIT dependence on saved clean control or recalibration rows.
 
 Reloads the latest saved arrival model for each candidate in an until-stable run.
-The mapping was fitted on these same recalibration rows: this is development
-analysis of dependence, NOT independent validation of calibration. No control
-outcomes are evaluated and no acceptance decisions or spacings are selected.
+Control rows were held out from training, validation, and recalibration, but
+were previously used by screening. Recalibration rows fitted the mapping itself.
+This diagnostic does not change acceptance decisions or select a spacing.
+Run real-data evaluation via SLURM.
 """
 from __future__ import annotations
 
@@ -54,20 +55,28 @@ def latest_candidates(run_dir):
     return metadata, result
 
 
-def recalibration_rows(run_dir, dataset):
+def clean_evaluation_rows(run_dir, dataset, role):
+    """Read exactly the chosen saved role; check cleanliness and disjointness."""
+    if role not in ('recalibration', 'control'):
+        raise ValueError('evaluation role must be recalibration or control')
     with np.load(Path(run_dir) / 'screening_split.npz') as split:
         if split['evaluation_scope'].item() != 'arrival' or split['training_scope'].item() != 'arrival':
             raise ValueError('saved split must be arrival-only')
-        rows = split['recalibration'].copy()
+        rows = split[role].copy()
         if (rows.ndim != 1 or rows.dtype.kind not in 'iu' or not len(rows)
                 or rows.min() < 0 or rows.max() >= len(dataset.x) or len(np.unique(rows)) != len(rows)):
-            raise ValueError('invalid saved recalibration indices')
-        for role in ('train', 'validation', 'control', 'wildfire'):
-            if np.intersect1d(rows, split[role]).size:
-                raise ValueError(f'recalibration overlaps {role}')
+            raise ValueError(f'invalid saved {role} indices')
+        for other in ('train', 'validation', 'recalibration', 'control', 'wildfire'):
+            if other != role and np.intersect1d(rows, split[other]).size:
+                raise ValueError(f'{role} overlaps {other}')
     if np.any(dataset.flags['BB_criterion1'][rows] | dataset.flags['BB_criterion2'][rows]):
-        raise ValueError('recalibration rows must be clean under both flags')
+        raise ValueError(f'{role} rows must be clean under both flags')
     return rows[np.argsort(dataset.time[rows], kind='stable')]
+
+
+def recalibration_rows(run_dir, dataset):
+    """Backward-compatible helper for the original recalibration diagnostic."""
+    return clean_evaluation_rows(run_dir, dataset, 'recalibration')
 
 
 def lag_pairs(time_days, lag_days, half_width_days=.5):
@@ -156,7 +165,7 @@ def write_table(path, rows):
         writer.writerows(rows)
 
 
-def plot_summary(path, rows):
+def plot_summary(path, rows, role='recalibration'):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
@@ -179,7 +188,8 @@ def plot_summary(path, rows):
         ax.set_yticks(range(len(labels)), labels)
         ax.set_title(title)
         ax.set_xlabel('Elapsed days (±0.5-day bins)')
-    fig.suptitle('Recalibration-set dependence: descriptive, overlapping pairs\nGray = unavailable; pair/event counts in dependence.csv', fontsize=11)
+    fig.suptitle(f'{role.capitalize()}-set dependence: descriptive, overlapping pairs\n'
+                 'Gray = unavailable; pair/event counts in dependence.csv', fontsize=11)
     fig.colorbar(im, ax=axes, shrink=.55, label='Correlation')
     fig.subplots_adjust(left=.19, right=.86, top=.9, bottom=.08, wspace=.08)
     fig.savefig(path, dpi=160)
@@ -190,6 +200,10 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--run-dirs', type=Path, nargs='+', required=True)
     parser.add_argument('--output-dir', type=Path, required=True)
+    parser.add_argument('--role', choices=('recalibration', 'control'), default='recalibration',
+                        help='Saved clean role whose PIT dependence is measured.')
+    parser.add_argument('--gap-days', type=float, nargs='+', default=list(GAPS),
+                        help='Elapsed-time lags and minimum thinning gaps; lag bins are +/-0.5 days.')
     parser.add_argument('--mat-path', default=DEFAULT_MAT_PATH)
     parser.add_argument('--device', default='cuda')
     parser.add_argument('--prediction-samples', type=int, default=400)
@@ -198,6 +212,8 @@ def main():
     args = parser.parse_args()
     if args.batch_size < 1 or args.prediction_samples < 2 or args.seed < 0:
         parser.error('require positive batch size, >=2 samples, and nonnegative seed')
+    if any(not np.isfinite(gap) or gap <= .5 for gap in args.gap_days):
+        parser.error('gap-days must be finite and exceed the 0.5-day bin half-width')
     if args.device == 'cuda' and not torch.cuda.is_available():
         raise RuntimeError('CUDA requested but unavailable')
     runs = [(p, *latest_candidates(p)) for p in args.run_dirs]
@@ -210,10 +226,13 @@ def main():
     output.mkdir(parents=True, exist_ok=True)
     manifest = dict(settings={k: str(v) if isinstance(v, Path) else
                              [str(p) for p in v] if k == 'run_dirs' else v for k, v in vars(args).items()},
-                    dataset_seed=dataset_seed, gaps_days=GAPS, half_width_days=.5,
-                    role='recalibration', model_selection='latest saved round per candidate',
-                    interpretation='Development diagnostic on the same rows used to fit the mapping. '
-                    'No control outcomes evaluated. Pairs overlap; no independence significance test. '
+                    dataset_seed=dataset_seed, gaps_days=args.gap_days, half_width_days=.5,
+                    role=args.role, model_selection='latest saved round per candidate',
+                    interpretation=(
+                        'Control rows are held out from training, validation, and recalibration, but previously used for screening. '
+                        if args.role == 'control' else
+                        'Development diagnostic on the same rows used to fit the mapping; no control outcomes evaluated. '
+                    ) + 'Pairs overlap; no independence significance test. '
                     'Thinning changes time/season weighting. No production spacing is selected.', models=[])
     (output / 'manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
     print(f'Loading data once with original dataset seed {dataset_seed}', flush=True)
@@ -222,9 +241,11 @@ def main():
     all_rows = []
     features = {name: index for index, name in enumerate(dataset.feature_names)}
     for run_dir, metadata, candidates in runs:
-        rows = recalibration_rows(run_dir, dataset)
+        mapping_rows = recalibration_rows(run_dir, dataset)
+        rows = (mapping_rows if args.role == 'recalibration'
+                else clean_evaluation_rows(run_dir, dataset, 'control'))
         times = dataset.time[rows]
-        # Copy only the small recalibration subset, preserving original row IDs.
+        # Copy only the chosen saved subset, preserving original row IDs.
         data = dataset.x[rows]
         run_id = run_dir.parent.name
         order_seed = metadata['candidate_order_seed']
@@ -239,26 +260,29 @@ def main():
             base = load_lstm_engressor_checkpoint(str(checkpoint), device=args.device)
             wrapped = RecalibratedEngressor.load(base, mapping)
             wrapped.require_full_mapping()
-            if wrapped.calibration_pit is None or len(wrapped.calibration_pit) != len(rows):
+            if wrapped.calibration_pit is None or len(wrapped.calibration_pit) != len(mapping_rows):
                 raise ValueError('require an arrival recalibration map fitted on the saved recalibration rows')
             print(f'[{model_index + 1}/{total_models}] seed {order_seed}: {candidate}, round '
-                  f'{record["screening_round"]}, {len(rows)} recalibration rows', flush=True)
+                  f'{record["screening_round"]}, {len(rows)} {args.role} rows', flush=True)
             raw, corrected = sample_pit(wrapped, x, y, args.batch_size, args.prediction_samples, pit_seed)
             destination = output / f'seed_{order_seed}_{run_id}'
             destination.mkdir(parents=True, exist_ok=True)
             np.savez_compressed(destination / f'{slugify(candidate)}_pit.npz',
                                 row_index=rows, source_index=dataset.source_index[rows],
-                                time_days=times, raw_pit=raw, corrected_pit=corrected)
+                                time_days=times, raw_pit=raw, corrected_pit=corrected,
+                                evaluation_role=args.role)
             model_info = dict(candidate=candidate, order_seed=order_seed, run_dir=str(run_dir),
                               screening_round=record['screening_round'], checkpoint=str(checkpoint),
                               mapping=str(mapping), conditioning_covariates=conditioning,
-                              n_recalibration=len(rows), sampling_seed=sampling_seed, pit_batch_base=pit_seed,
+                              evaluation_role=args.role, n_evaluation=len(rows),
+                              n_recalibration=len(mapping_rows), sampling_seed=sampling_seed, pit_batch_base=pit_seed,
                               pit_seed_rule='pit_batch_base + sorted batch start row')
             model_rows = []
             for kind, pit in [('raw', raw), ('corrected', corrected)]:
-                for diagnostic in dependence_rows(pit, times):
+                for diagnostic in dependence_rows(pit, times, gaps=args.gap_days):
                     model_rows.append(dict(candidate=candidate, order_seed=order_seed,
-                                           screening_round=record['screening_round'], pit_kind=kind, **diagnostic))
+                                           screening_round=record['screening_round'],
+                                           evaluation_role=args.role, pit_kind=kind, **diagnostic))
             write_table(destination / f'{slugify(candidate)}_dependence.csv', model_rows)
             all_rows.extend(model_rows)
             manifest['models'].append(model_info)
@@ -268,7 +292,7 @@ def main():
             if args.device == 'cuda':
                 torch.cuda.empty_cache()
             print('  saved PIT values and dependence diagnostics', flush=True)
-    plot_summary(output / 'dependence.png', all_rows)
+    plot_summary(output / 'dependence.png', all_rows, role=args.role)
     print(f'Complete: {len(manifest["models"])} models; outputs in {output}', flush=True)
 
 

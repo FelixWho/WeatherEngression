@@ -21,7 +21,6 @@ from experiments.calibration import (
 )
 from experiments.real_metrics import pit_values
 from experiments.wildfire_sensitivity import main as screening
-from experiments.wildfire_sensitivity import evaluation
 
 
 def uniform_model(outputs=1):
@@ -205,7 +204,7 @@ class ADIntegrationTests(unittest.TestCase):
                 ad = dict(accepted=acceptance, valid=True, statistic=1.,
                           p_value=.5 if acceptance else .01, reason="test")
                 with contextlib.redirect_stdout(io.StringIO()), \
-                     patch.object(evaluation, "ad_block_bootstrap", return_value=ad) as check:
+                     patch.object(screening, "ad_block_bootstrap", return_value=ad) as check:
                     result = screening.print_calibration(wrapped, x, y, "control", np.arange(20) * 30.,
                                                          evaluation_scope=scope, calibration_metric="ad")
                 self.assertEqual(result["calibrated"], acceptance)
@@ -244,6 +243,8 @@ class ADIntegrationTests(unittest.TestCase):
 
     def test_cli_defaults_and_json_invalid_values(self):
         args = screening.build_parser().parse_args([])
+        self.assertEqual(args.control_gap_days, 0)
+        self.assertEqual(screening.build_parser().parse_args(['--control-gap-days', '15']).control_gap_days, 15)
         self.assertEqual((args.calibration_metric, args.ad_alpha, args.ad_bootstrap_replicates,
                           args.ad_bootstrap_seed), ("coverage", .05, 2000, 2430))
         args = screening.build_parser().parse_args(["--calibration-metric", "ad", "--ad-alpha", ".1",
@@ -262,7 +263,7 @@ class ADIntegrationTests(unittest.TestCase):
             env = dict(os.environ, REPO_ROOT=str(repo), MAT_PATH=str(data), CKPT_DIR=directory,
                        CAPTURE_ARGS=str(capture), SCREENING_MODE="until_stable",
                        EVALUATION_SCOPE="arrival", CALIBRATION_METRIC="ad", AD_ALPHA="0.1",
-                       AD_BOOTSTRAP_REPLICATES="31", AD_BOOTSTRAP_SEED="42")
+                       AD_BOOTSTRAP_REPLICATES="31", AD_BOOTSTRAP_SEED="42", CONTROL_GAP_DAYS="15")
             # A shell function intercepts BOTH Python invocations, including the
             # CUDA preflight. This tests argument wiring without running a job.
             shell = '''
@@ -281,6 +282,7 @@ bash slurm/wildfire_sensitivity/run.slurm
             args = capture.read_text().splitlines()
             for flag, value in [("--calibration-metric", "ad"), ("--ad-alpha", "0.1"),
                                 ("--ad-bootstrap-replicates", "31"), ("--ad-bootstrap-seed", "42"),
+                                ("--control-gap-days", "15"),
                                 ("--screening-mode", "until_stable"), ("--evaluation-scope", "arrival")]:
                 self.assertEqual(args[args.index(flag) + 1], value)
 
@@ -291,6 +293,45 @@ bash slurm/wildfire_sensitivity/run.slurm
             self.assertEqual(pit.shape, times.shape)
             self.assertTrue(np.all((pit >= 0) & (pit <= 1)))
             self.assertEqual(len(np.unique(times)), 10)
+
+    def test_control15_launchers_use_separate_orders_and_output_directories(self):
+        repo = Path(__file__).resolve().parents[1]
+        shell = '''
+python() {
+  if [[ "$2" == "-" ]]; then
+    cat >/dev/null
+  else
+    printf '%s\\n' "$@" > "$CAPTURE_ARGS"
+  fi
+}
+export -f python
+# Intercept only the final directory listing; no checkpoint directory is created.
+ls() { :; }
+export -f ls
+bash "$LAUNCHER"
+'''
+        with TemporaryDirectory() as directory:
+            capture = Path(directory) / 'args'
+            data = Path(directory) / 'empty.mat'
+            data.touch()
+            for seed in [2027, 2028, 2029]:
+                launcher = repo / f'slurm/wildfire_sensitivity/run_until_stable_arrival_ad_control15_order_{seed}.slurm'
+                contents = launcher.read_text()
+                self.assertIn('#SBATCH -A compute2-myu', contents)
+                self.assertIn('#SBATCH --time=04:00:00', contents)
+                env = dict(os.environ, REPO_ROOT=str(repo), MAT_PATH=str(data),
+                           CAPTURE_ARGS=str(capture), LAUNCHER=str(launcher), SLURM_JOB_ID='test123')
+                env.pop('CKPT_DIR', None)
+                subprocess.run(['bash', '-c', shell], cwd=repo, env=env,
+                               check=True, capture_output=True, text=True)
+                args = capture.read_text().splitlines()
+                for flag, value in [('--control-gap-days', '15'), ('--calibration-metric', 'ad'),
+                                    ('--screening-mode', 'until_stable'), ('--evaluation-scope', 'arrival'),
+                                    ('--candidate-order-seed', str(seed)), ('--ad-alpha', '0.05'),
+                                    ('--ad-bootstrap-replicates', '2000'), ('--ad-bootstrap-seed', '2430')]:
+                    self.assertEqual(args[args.index(flag) + 1], value)
+                self.assertTrue(args[args.index('--checkpoint-dir') + 1].endswith(
+                    f'/ad_control15_arrival_order_{seed}/test123'))
 
 
 if __name__ == "__main__":

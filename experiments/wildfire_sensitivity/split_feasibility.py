@@ -1,8 +1,9 @@
-"""Measure the cost of selecting spaced recalibration rows from ALL clean data.
+"""Count splits with spaced control or recalibration rows from ALL clean data.
 
-No models are fitted. Reproduce the current split, then select recalibration
-points first, optionally purge nearby arrivals, and reuse the existing control/
-validation splitters. Run the real-data inventory through SLURM.
+No models are fitted. Reserve the selected role first, optionally exclude nearby
+arrivals, and build the other roles with the existing blocked splitters. Control
+is the relevant role for spacing the PIT observations used by AD. Run the
+real-data inventory through SLURM.
 """
 from __future__ import annotations
 
@@ -15,7 +16,7 @@ import numpy as np
 
 from data_generation.ena_weather import DEFAULT_MAT_PATH, _matlab_datenum_to_datetime
 from experiments.wildfire_sensitivity.control import (
-    _months, month_matched_subsample, split_clean_holdout,
+    _months, earliest_spaced, month_matched_subsample, split_clean_holdout,
 )
 
 
@@ -56,17 +57,6 @@ def select_spaced(clean, times, months, quotas, gap_days, seed):
     return np.asarray(selected, dtype=np.int64)
 
 
-def earliest_spaced(clean, times, gap_days):
-    """Maximum count under spacing alone, without month quotas."""
-    if not np.isfinite(gap_days) or gap_days <= 0:
-        raise ValueError("gap_days must be positive and finite")
-    selected = []
-    for row in clean[np.argsort(times[clean], kind="stable")]:
-        if not selected or times[row] - times[selected[-1]] >= gap_days:
-            selected.append(row)
-    return np.asarray(selected, dtype=np.int64)
-
-
 def purge_near_selected(clean, selected, times, guard_days):
     """Exclude nearby arrivals; zero removes only the selected rows themselves."""
     if not np.isfinite(guard_days) or guard_days < 0:
@@ -78,16 +68,23 @@ def purge_near_selected(clean, selected, times, guard_days):
     return remaining[~excluded], remaining[excluded]
 
 
-def split_inventory(clean, wildfire, times, window_hours, settings, recalibration=None):
-    """Existing split (None), or reserve provided recalibration rows FIRST.
+def split_inventory(clean, wildfire, times, window_hours, settings, recalibration=None, *, control=None):
+    """Reproduce the current split, or reserve ONE provided role first.
 
+    For spaced control: reserve control, then split recalibration, then validation.
+    For spaced recalibration: reserve recalibration, then control, then validation.
+    If neither is provided, reproduce the production split unchanged.
     Every clean row is accounted for, including guards, month-matching discards,
     and unassigned rows if the existing splitter cannot finish.
     """
+    if recalibration is not None and control is not None:
+        raise ValueError("reserve only one spaced role per comparison")
+    spaced_role = "control" if control is not None else "recalibration"
+    spaced_rows = control if control is not None else recalibration
+    guard_days = settings.get(f"{spaced_role}_guard_days", window_hours / 24)
     subsets = {}
     counts = {}
     status, reason = "ok", ""
-    recalibration_guard_days = settings.get("recalibration_guard_days", window_hours / 24)
 
     def holdout(pool, role, fraction, seed):
         if not len(pool):
@@ -112,14 +109,15 @@ def split_inventory(clean, wildfire, times, window_hours, settings, recalibratio
 
     try:
         remaining = clean
-        if recalibration is not None:
-            subsets["recalibration"] = recalibration
-            remaining, subsets["recalibration_guard"] = purge_near_selected(
-                clean, recalibration, times, recalibration_guard_days,
+        if spaced_rows is not None:
+            subsets[spaced_role] = spaced_rows
+            remaining, subsets[f"{spaced_role}_guard"] = purge_near_selected(
+                clean, spaced_rows, times, guard_days,
             )
-            counts["after_recalibration_guard"] = len(remaining)
-        remaining = holdout(remaining, "control", settings["control_fraction"],
-                            settings["control_seed"])
+            counts[f"after_{spaced_role}_guard"] = len(remaining)
+        if control is None:
+            remaining = holdout(remaining, "control", settings["control_fraction"],
+                                settings["control_seed"])
         if recalibration is None:
             remaining = holdout(remaining, "recalibration", settings["recalibration_fraction"],
                                 settings["recalibration_seed"])
@@ -151,8 +149,8 @@ def split_inventory(clean, wildfire, times, window_hours, settings, recalibratio
     for i, left in enumerate(roles):
         a = np.sort(times[subsets[left]])
         for right in roles[i + 1:]:
-            required_gap = (recalibration_guard_days
-                            if recalibration is not None and "recalibration" in (left, right)
+            required_gap = (guard_days
+                            if spaced_rows is not None and spaced_role in (left, right)
                             else window_hours / 24)
             if required_gap == 0:
                 continue
@@ -174,9 +172,15 @@ def main():
     parser.add_argument("--mat-path", default=DEFAULT_MAT_PATH)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--gap-days", type=float, default=10.)
+    parser.add_argument("--spaced-role", choices=("recalibration", "control"), default="recalibration",
+                        help="Role selected from the full clean pool before the other splits. "
+                        "Use control for the observations whose PIT is checked by AD.")
     parser.add_argument("--recalibration-guard-days", type=float, default=None,
                         help="Exclusion on either side of each recalibration point; "
                         "default: trajectory history length. Zero removes this exclusion only.")
+    parser.add_argument("--control-guard-days", type=float, default=None,
+                        help="Exclusion around spaced control points; default: trajectory history "
+                        "length. Zero permits nearby observations in other sets.")
     parser.add_argument("--population-from", type=Path,
                         help="Reuse population.npz and dataset metadata from a previous inventory.")
     parser.add_argument("--counts", type=int, nargs="+", default=[25, 50, 75, 100, 150, 200, 250, 300])
@@ -186,10 +190,10 @@ def main():
         parser.error("counts must be positive and seeds nonnegative")
     if not np.isfinite(args.gap_days) or args.gap_days <= 0:
         parser.error("gap-days must be positive and finite")
-    if args.recalibration_guard_days is not None and (
-        not np.isfinite(args.recalibration_guard_days) or args.recalibration_guard_days < 0
-    ):
-        parser.error("recalibration-guard-days must be nonnegative and finite")
+    for role in ("recalibration", "control"):
+        value = getattr(args, f"{role}_guard_days")
+        if value is not None and (not np.isfinite(value) or value < 0):
+            parser.error(f"{role}-guard-days must be nonnegative and finite")
 
     # Reuse the production loader and constants so the eligible population and
     # baseline counts match screening exactly. Load trajectories once in SLURM.
@@ -234,6 +238,9 @@ def main():
         window_hours=window_hours, gap_days=args.gap_days,
         recalibration_guard_days=(window_hours / 24 if args.recalibration_guard_days is None
                                   else args.recalibration_guard_days),
+        control_guard_days=(window_hours / 24 if args.control_guard_days is None
+                            else args.control_guard_days),
+        spaced_role=args.spaced_role,
     )
     maximum = earliest_spaced(clean, times, args.gap_days)
     np.savez_compressed(args.output_dir / "population.npz", time_days=times,
@@ -248,30 +255,35 @@ def main():
         date_start=str(_matlab_datenum_to_datetime(times[clean].min())),
         date_end=str(_matlab_datenum_to_datetime(times[clean].max())),
         selection="random greedy from all clean rows; largest-remainder wildfire month quotas",
+        spaced_role=args.spaced_role,
         notes=["Counts are a split-feasibility diagnostic, not calibration or sensitivity results.",
                "The earliest-first maximum ignores month quotas and the need for other sets.",
                "Greedy shortfalls do not establish the maximum under month quotas.",
-               "Control and validation reuse production blocked splits; control remains month-matched.",
-               "Control/validation guards and the current baseline use the full trajectory history.",
-               "Proposed splits use recalibration_guard_days around recalibration points; zero permits nearby rows in other sets."],
+               "The chosen spaced role is reserved first; the other clean roles reuse existing blocked splits and month matching.",
+               "The current baseline and non-spaced roles retain their original trajectory-history guards.",
+               "The selected role's guard-days setting controls its exclusion zone; zero permits nearby rows in other sets.",
+               "Control spacing is relevant to AD, but counts alone do not establish PIT independence or reliable p-values."],
         rows=[],
     )
 
     def record(name, selected=None, seed=None, requested=None, quotas=None):
-        counts, subsets = split_inventory(clean, wildfire, times, window_hours, settings, selected)
-        recal = subsets.get("recalibration", np.array([], dtype=int))
-        sorted_times = np.sort(times[recal])
+        role = args.spaced_role
+        counts, subsets = split_inventory(clean, wildfire, times, window_hours, settings,
+                                          **{role: selected})
+        held = subsets.get(role, np.array([], dtype=int))
+        sorted_times = np.sort(times[held])
         row = dict(scenario=name, selection_seed=seed, requested=requested,
-                   selection_complete=None if requested is None else len(recal) == requested,
+                   spaced_role=role,
+                   selection_complete=None if requested is None else len(held) == requested,
                    **counts,
-                   min_recalibration_gap_days=float(np.diff(sorted_times).min()) if len(recal) > 1 else None,
-                   recalibration_month_counts=np.bincount(months[recal], minlength=13)[1:].tolist(),
-                   recalibration_year_counts=dict(zip(*np.unique(
-                       [str(_matlab_datenum_to_datetime(t).year) for t in sorted_times], return_counts=True))),
                    requested_month_counts=None if quotas is None else quotas[1:].tolist())
-        row["recalibration_year_counts"] = {k: int(v) for k, v in row["recalibration_year_counts"].items()}
-        if selected is not None and len(recal) > 1 and row["min_recalibration_gap_days"] < args.gap_days:
-            raise AssertionError("recalibration spacing violated")
+        row[f"min_{role}_gap_days"] = float(np.diff(sorted_times).min()) if len(held) > 1 else None
+        row[f"{role}_month_counts"] = np.bincount(months[held], minlength=13)[1:].tolist()
+        years, year_counts = np.unique(
+            [str(_matlab_datenum_to_datetime(t).year) for t in sorted_times], return_counts=True)
+        row[f"{role}_year_counts"] = {k: int(v) for k, v in zip(years, year_counts)}
+        if selected is not None and len(held) > 1 and row[f"min_{role}_gap_days"] < args.gap_days:
+            raise AssertionError(f"{role} spacing violated")
         np.savez_compressed(args.output_dir / f"{name}.npz", **subsets)
         results["rows"].append(row)
         (args.output_dir / "results.json").write_text(json.dumps(results, indent=2, allow_nan=False) + "\n")
@@ -280,7 +292,7 @@ def main():
             writer = csv.DictWriter(out, keys, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(results["rows"])
-        print(f"{name}: recal={len(recal)}, recal_guard={row.get('recalibration_guard')}, "
+        print(f"{name}: recal={row.get('recalibration')}, {role}_guard={row.get(role + '_guard')}, "
               f"train={row.get('train')}, val={row.get('validation')}, control={row.get('control')}, "
               f"status={row['status']} {row['reason']}", flush=True)
 

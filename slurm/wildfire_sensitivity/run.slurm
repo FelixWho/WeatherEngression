@@ -41,6 +41,7 @@ CALIBRATION_METRIC="${CALIBRATION_METRIC:-coverage}"
 AD_ALPHA="${AD_ALPHA:-0.05}"
 AD_BOOTSTRAP_REPLICATES="${AD_BOOTSTRAP_REPLICATES:-2000}"
 AD_BOOTSTRAP_SEED="${AD_BOOTSTRAP_SEED:-2430}"
+CONTROL_GAP_DAYS="${CONTROL_GAP_DAYS:-0}"
 ORDER_ARGS=()
 if [[ -n "${CANDIDATE_ORDER_SEED:-}" ]]; then
   ORDER_ARGS=(--candidate-order-seed "${CANDIDATE_ORDER_SEED}")
@@ -57,6 +58,7 @@ echo "scope         : ${EVALUATION_SCOPE}"
 echo "calibration   : ${CALIBRATION_METRIC}"
 echo "AD settings   : alpha=${AD_ALPHA}, replicates=${AD_BOOTSTRAP_REPLICATES}, seed=${AD_BOOTSTRAP_SEED}"
 echo "order seed    : ${CANDIDATE_ORDER_SEED:-original order}"
+echo "control gap   : ${CONTROL_GAP_DAYS} days (positive: earliest-first, no month matching or surrounding guard)"
 echo "data          : ${MAT_PATH}"
 echo "checkpoints  -> ${CKPT_DIR}"
 
@@ -90,6 +92,7 @@ python -u -m experiments.wildfire_sensitivity.main \
   --ad-alpha "${AD_ALPHA}" \
   --ad-bootstrap-replicates "${AD_BOOTSTRAP_REPLICATES}" \
   --ad-bootstrap-seed "${AD_BOOTSTRAP_SEED}" \
+  --control-gap-days "${CONTROL_GAP_DAYS}" \
   "${ORDER_ARGS[@]}" \
   --mat-path "${MAT_PATH}" \
   --checkpoint-dir "${CKPT_DIR}"
